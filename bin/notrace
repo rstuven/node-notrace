@@ -1,0 +1,216 @@
+#!/usr/bin/env node
+(function() {
+  var Consumer, colors, consumer, doTimeout, exit, program, report, util;
+
+  program = require('commander');
+
+  util = require('util');
+
+  colors = require('colors');
+
+  Consumer = require('..').Consumer;
+
+  program.version('0.0.1').usage('[command] [options]').option('-C --nocolor', 'Disable colors.');
+
+  Object.getPrototypeOf(program).commonOptions = function() {
+    return this.option('-p, --probe [provider.module.probe]', 'Probe key. (default: *.*.*)', '*.*.*').option('-t, --timeout [milliseconds]', 'Time to wait before disconnect. (default: 1000)', Number, 1000).option('-R, --report [object|pretty]', 'Report format. (default: pretty)', 'pretty');
+  };
+
+  consumer = new Consumer;
+
+  program.command('list').description('List matching probes').commonOptions().action(function(command) {
+    var matches, probeName, query;
+    matches = command.probe.match(/^([^\.]*\.[^\.]*)\.?([^\.]*)$/);
+    if (!(matches != null)) matches = ['', '*.*', '*'];
+    query = matches[1] + '.$probes';
+    probeName = matches[2] || '*';
+    console.log("Listing probes: " + matches[1] + "." + probeName + "\n");
+    consumer.start({
+      probeKey: query,
+      sampleInterval: 0
+    }, function(subject) {
+      return subject.where(function(x) {
+        return probeName === '*' || probeName === x.args[0].name;
+      }).select(function(x) {
+        var p;
+        p = x.args[0];
+        return {
+          provider: x.provider,
+          module: x.module,
+          probe: p.name,
+          instant: p.instant,
+          sampleThreshold: p.sampleThreshold,
+          types: p.types
+        };
+      }).subscribe(report[command.report]);
+    });
+    return doTimeout(command.timeout);
+  });
+
+  program.command('sample').description('Subscribe to probe samples').commonOptions().option('-m, --mapbefore <expression>', 'Map expression before processing, right after --filterbefore.').option('-M, --mapafter <expression>', 'Map expression after processing, right before the callback').option('-f, --filterbefore <expression>', 'Filter using boolean expression at the beginning.').option('-F, --filterafter <expression>', 'Filter using boolean expression right before --mapafter.').option('-a, --aggregate <function(expression)>', 'Aggregate expression.').option('-A, --aggregate2 <function>', 'Aggregate function to apply after --aggregate with --pair.\n' + '                                        Requires no --group.').option('-g, --group <expression>', 'Group expression.').option('-w, --window <span>[,shift]', 'Time window. <span> is the length of each window.\n' + '                                        [,shift] is the interval between creation of consecutive windows.').option('-i, --interval <milliseconds>', 'Sampling interval.').option('-P, --pair', 'Pair previous and current sample. Requires --aggregate and no --group.').action(function(command) {
+    consumer.start({
+      probeKey: command.probe,
+      sampleInterval: command.interval
+    }, {
+      mapbefore: command.mapbefore,
+      mapafter: command.mapafter,
+      filterbefore: command.filterbefore,
+      filterafter: command.filterafter,
+      aggregate: command.aggregate,
+      aggregate2: command.aggregate2,
+      group: command.group,
+      window: command.window,
+      pair: command.pair,
+      callback: report[command.report]
+    });
+    return doTimeout(command.timeout);
+  });
+
+  exit = function(code) {
+    consumer.stop();
+    consumer.disconnect();
+    return process.exit(code);
+  };
+
+  doTimeout = function(timeout) {
+    return setTimeout(function() {
+      return exit(0);
+    }, timeout);
+  };
+
+  process.on('SIGTERM', function() {
+    return exit(1);
+  });
+
+  process.on('SIGINT', function() {
+    return exit(1);
+  });
+
+  report = {
+    object: function(x) {
+      return console.log(util.inspect(x, false, 5, !program.nocolor));
+    },
+    pretty: (function() {
+      var formatFirst, formatHeader, formatObject, formatQuantizer, formatValue, pad;
+      formatFirst = true;
+      pad = function(x, n) {
+        while (x.length < Math.abs(n)) {
+          if (n < 0) {
+            x = ' ' + x;
+          } else {
+            x = x + ' ';
+          }
+        }
+        return x;
+      };
+      formatHeader = function(k, v) {
+        var h;
+        if (typeof v === 'number') {
+          h = pad(k, -15);
+        } else if (typeof v === 'boolean') {
+          h = pad(k, 15);
+        } else {
+          h = pad(k, 20);
+        }
+        return h.blue;
+      };
+      formatValue = function(v) {
+        var f, r;
+        if (!(v != null)) {
+          return '<undefined>';
+        } else if (typeof v === 'number') {
+          f = v.toFixed(3);
+          if (f.slice(-3) === '000') f = v.toString();
+          r = pad(f, -15);
+          return r.grey;
+        } else if (typeof v === 'string') {
+          return pad(v, 20);
+        } else if (typeof v === 'boolean') {
+          r = pad(v.toString(), 15);
+          return r.yellow;
+        } else if (v.constructor.name === 'Quantizer') {
+          return formatQuantizer(v);
+        } else {
+          return util.inspect(v, false, 5, !program.nocolor);
+        }
+      };
+      formatQuantizer = function(q) {
+        var bar, count, i, length, lines, totalCount, _ref, _ref2;
+        length = 50;
+        bar = function(x) {
+          var _i, _results;
+          if (q.maxCount === 0) return '';
+          x = (length - 1) * x / q.maxCount;
+          if (x === 0) return pad('', length);
+          x = (function() {
+            _results = [];
+            for (var _i = 1; 1 <= x ? _i <= x : _i >= x; 1 <= x ? _i++ : _i--){ _results.push(_i); }
+            return _results;
+          }).apply(this).map(function() {
+            return '▒';
+          }).join('');
+          x = pad(x, length);
+          return x.red;
+        };
+        lines = [];
+        lines.push('');
+        lines.push(formatHeader('value', 0) + ' ' + pad('', length) + ' ' + formatHeader('count', 0));
+        totalCount = 0;
+        for (i = _ref = q.minIndex, _ref2 = q.maxIndex; i <= _ref2; i += 1) {
+          count = q.count(i);
+          totalCount += count;
+          lines.push(formatValue(q.indexValue(i)) + '│' + bar(count) + '│' + formatValue(count));
+        }
+        lines.push(pad('', 15) + '│' + pad('total count ', -length).yellow + '│' + formatValue(totalCount).stripColors);
+        lines.push('');
+        return lines.join('\n');
+      };
+      formatObject = function(x) {
+        var head, key, line, result, v, value;
+        if (x instanceof Array) {
+          formatFirst = true;
+          result = '';
+          x.forEach(function(y) {
+            return result += formatObject(y);
+          });
+          return result;
+        }
+        if (typeof x !== 'object') return formatValue(x) + '\n';
+        head = [];
+        line = [];
+        for (key in x) {
+          value = x[key];
+          v = formatValue(value);
+          if (v != null) {
+            line.push(v);
+            if (formatFirst) head.push(formatHeader(key, value));
+          }
+        }
+        result = '';
+        if (line.length !== 0) {
+          if (formatFirst) {
+            result += "\n";
+            result += head.join(' ') + "\n";
+            formatFirst = false;
+          }
+          result += line.join(' ') + "\n";
+        }
+        return result;
+      };
+      return function(x) {
+        var result;
+        result = formatObject(x);
+        if (program.nocolor) result = result.stripColors;
+        return process.stdout.write(result);
+      };
+    })()
+  };
+
+  program.command('*').action(function() {
+    process.stdout.write(program.helpInformation());
+    return process.exit(0);
+  });
+
+  program.parse(process.argv);
+
+}).call(this);

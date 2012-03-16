@@ -1,0 +1,33 @@
+{
+  "name": "node-notrace",
+  "author": "Ricardo Stuven <rstuven@gmail.com>",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/rstuven/node-notrace.git"
+  },
+  "main": "lib/main",
+  "bin": { "notrace": "./bin/notrace" },
+  "scripts": {
+    "test": "make test"
+  },
+  "engines": {
+    "node": "~0.6.1"
+  },
+  "dependencies": {
+    "bson": "*",
+    "rxjs": "*",
+    "amqp": "=0.1.1",
+    "commander": "*",
+    "colors": "*",
+    "uuid-v4.js": "*"
+  },
+  "devDependencies": {
+    "coffee-script": "*",
+    "mocha": "*",
+    "chai": "*",
+    "sinon": "*",
+    "sinon-chai": "*"
+  },
+  "optionalDependencies": {}
+}
