@@ -27,7 +27,8 @@
     "mocha": "*",
     "chai": "*",
     "sinon": "*",
-    "sinon-chai": "*"
+    "sinon-chai": "*",
+    "amqp-mock": "git://github.com/rstuven/node-amqp-mock.git#amqp-0.1.1"
   },
   "optionalDependencies": {}
 }

@@ -9,6 +9,8 @@ exports.Timer = class Timer
             clearInterval @id
             @id = null
 
+    isStarted: -> @id?
+
 exports.Delay = class Delay
 
     start: (delay, fn) ->
@@ -19,3 +21,5 @@ exports.Delay = class Delay
         if @id?
             clearTimeout @id
             @id = null
+
+    isStarted: -> @id?
