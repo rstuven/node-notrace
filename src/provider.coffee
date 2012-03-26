@@ -34,7 +34,7 @@ exports.Provider = class Provider extends EventEmitter
                 @addProbe args
 
         @addProbe
-            name: '$probes'
+            name: '_probes'
             sampleThreshold: 0
             instant: true
             types: ['object']

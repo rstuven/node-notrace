@@ -12,6 +12,7 @@ describe 'Probe', ->
             p = new Probe 'probe name', 'number', 'string', 'number'
             p.name.should.equal 'probe name'
             p.enabled.should.be.false
+            p.instant.should.be.false
             p.types.should.eql ['number', 'string', 'number']
             p.args.should.eql [0, '', 0]
 

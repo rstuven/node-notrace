@@ -22,7 +22,7 @@
     var matches, probeName, query;
     matches = command.probe.match(/^([^\.]*\.[^\.]*)\.?([^\.]*)$/);
     if (!(matches != null)) matches = ['', '*.*', '*'];
-    query = matches[1] + '.$probes';
+    query = matches[1] + '._probes';
     probeName = matches[2] || '*';
     console.log("Listing probes: " + matches[1] + "." + probeName + "\n");
     consumer.start({

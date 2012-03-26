@@ -23,7 +23,7 @@ program
     .action (command) ->
         matches = command.probe.match /^([^\.]*\.[^\.]*)\.?([^\.]*)$/
         matches = ['','*.*','*'] if not matches?
-        query = matches[1] + '.$probes'
+        query = matches[1] + '._probes'
         probeName = matches[2] or '*'
         console.log "Listing probes: #{matches[1]}.#{probeName}\n"
         consumer.start {probeKey: query, sampleInterval: 0}, (subject) ->

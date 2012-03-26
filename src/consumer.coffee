@@ -82,8 +82,8 @@ exports.Consumer = class Consumer
                 @samples = exchange
                 @connection.queue '', (queue) =>
                     return if not @connection?
-                    #console.log 'queue bind ' + @probeKey
                     @queue = queue
+                    #console.log "queue.bind #{@samples.name}, #{@probeKey}.#{@id}"
                     queue.bind @samples.name, @probeKey + '.' + @id
 
                     #console.log 'queue subscribe'

@@ -21,7 +21,7 @@ describe 'Provider', ->
         it 'should initialize probes', ->
             p = new Provider name: 'p'
             should.exist p.probes
-            should.exist p.probes.$probes
+            should.exist p.probes._probes
 
         it 'should initialize probes config', ->
             p = new Provider
