@@ -3,10 +3,12 @@ util = require 'util'
 colors = require 'colors'
 {Consumer} = require '..'
 
+version = JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version
+
 program
-    .version('0.0.1')
+    .version(version)
     .usage('[command] [options]')
-    .option('-C --nocolor', 'Disable colors.')
+    .option('-C, --nocolor', 'Disable colors.')
 
 Object.getPrototypeOf(program).commonOptions = ->
     this

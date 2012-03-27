@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 (function() {
-  var Consumer, colors, consumer, doTimeout, exit, program, report, util;
+  var Consumer, colors, consumer, doTimeout, exit, program, report, util, version;
 
   program = require('commander');
 
@@ -10,7 +10,9 @@
 
   Consumer = require('..').Consumer;
 
-  program.version('0.0.1').usage('[command] [options]').option('-C --nocolor', 'Disable colors.');
+  version = JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version;
+
+  program.version(version).usage('[command] [options]').option('-C, --nocolor', 'Disable colors.');
 
   Object.getPrototypeOf(program).commonOptions = function() {
     return this.option('-p, --probe [provider.module.probe]', 'Probe key. (default: *.*.*)', '*.*.*').option('-t, --timeout [milliseconds]', 'Time to wait before disconnect. (default: 1000)', Number, 1000).option('-R, --report [object|pretty]', 'Report format. (default: pretty)', 'pretty');
