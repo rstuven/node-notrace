@@ -66,13 +66,13 @@ exports.Probe = class Probe extends EventEmitter
             @sample null, null, @args
 
     sample: (consumerId, callback, args, timestamp) ->
-        now = new Date()
+        now = Date.now()
         return unless @sampleThreshold is 0 or not @lastTimestamp? or (now - @lastTimestamp) >= @sampleThreshold
         @lastTimestamp = now
 
         go = (err, v, ts) =>
             sample =
-                timestamp: ts or new Date().getTime()
+                timestamp: ts or Date.now()
                 hits: @hits
                 args: v
                 error: err
