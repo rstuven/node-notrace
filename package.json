@@ -1,7 +1,7 @@
 {
   "name": "notrace",
   "author": "Ricardo Stuven <rstuven@gmail.com>",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "repository": {
     "type": "git",
     "url": "git://github.com/rstuven/node-notrace.git"
