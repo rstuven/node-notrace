@@ -3,7 +3,7 @@ LIB = lib
 BIN = bin
 DOC = doc
 
-all: clean js bin codex
+all: clean js bin
 
 js:
 	@echo "coffee => js"
@@ -21,11 +21,10 @@ bin:
 clean:
 	@rm -rf $(LIB)
 	@rm -rf $(BIN)
-	@rm -rf $(DOC)/out
 
 test: all
 	@mocha -R spec
 
-codex:
+doc: all
 	@echo "js => doc"
-	@codex build -i doc
+	@codex build -i $(DOC) -o ../node-notrace-doc

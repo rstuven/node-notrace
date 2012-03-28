@@ -2,7 +2,7 @@
     "locals": {
         "title": "NoTrace",
         "ghuser": "rstuven",
-        "ghbaseurl": "",
+        "ghbaseurl": "/node-notrace",
         "ghproject": "node-notrace",
         "tweetvia": "zxrs",
         "tweetrelated": "zxrs",
@@ -18,19 +18,19 @@
                     "name": "consumer",
                     "title": "Consumer",
                     "file": "../../lib/consumer.js",
-                    "description": "Why  a description here? Is this rendered or just for documenting codex.json file?"
+                    "description": ""
                 },
                 {
                     "name": "provider",
                     "title": "Provider",
                     "file": "../../lib/provider.js",
-                    "description": "Why  a description here? Is this rendered or just for documenting codex.json file?"
+                    "description": ""
                 },
                 {
                     "name": "probe",
                     "title": "Probe",
                     "file": "../../lib/probe.js",
-                    "description": "Why  a description here? Is this rendered or just for documenting codex.json file?"
+                    "description": ""
                 }
             ]
         }
