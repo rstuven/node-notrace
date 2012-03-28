@@ -94,10 +94,10 @@ describe 'Probe', ->
             p = new Probe
                 name: 'p'
                 args: -> 123
-            p.sample 'c1', (err, s, cids) ->
+            p.sample 'c1', (err, s, cid) ->
                 should.exist s.args
                 s.args.should.eql [123]
-                cids.should.eql ['c1']
+                cid.should.equal 'c1'
                 done()
 
         it 'should return a sample on async argument', (done) ->
@@ -107,10 +107,10 @@ describe 'Probe', ->
                     setTimeout (-> cb null, 123 ), 1
                     undefined
             setTimeout ->
-                p.sample 'c1', (err, s, cids) ->
+                p.sample 'c1', (err, s, cid) ->
                     should.exist s.args
                     s.args.should.eql [123]
-                    cids.should.eql ['c1']
+                    cid.should.equal 'c1'
                     done()
             , 2
 
@@ -121,11 +121,11 @@ describe 'Probe', ->
                     setTimeout (-> cb null, 123, 999 ), 1
                     undefined
             setTimeout ->
-                p.sample 'c1', (err, s, cids) ->
+                p.sample 'c1', (err, s, cid) ->
                     should.exist s.args
                     s.timestamp.should.equal 999
                     s.args.should.eql [123]
-                    cids.should.eql ['c1']
+                    cid.should.equal 'c1'
                     done()
             , 2
 
@@ -148,7 +148,7 @@ describe 'Probe', ->
 
         it 'should return a timestamp', (done) ->
             p = new Probe 'p'
-            p.sample 'c1', (err, s, cids) ->
+            p.sample 'c1', (err, s, cid) ->
                 should.exist s.timestamp
                 done()
 
@@ -156,10 +156,10 @@ describe 'Probe', ->
             p = new Probe
                 name: 'p'
                 sampleThreshold: 0
-            p.sample 'c1', (err, s1, cids1) ->
+            p.sample 'c1', (err, s1, cid1) ->
                 ts = s1.timestamp
                 setTimeout(->
-                    p.sample 'c2', (err, s2, cids2) ->
+                    p.sample 'c2', (err, s2, cid2) ->
                         s2.timestamp.should.not.equal ts
                         done()
                 , 1)

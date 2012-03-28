@@ -20,7 +20,6 @@ exports.Probe = class Probe extends EventEmitter
         @id = uuid()
 
         # multiple consumers support
-        @consumerIds = [] # for instant sampling probes
         @consumerTimers = {} # for interval sampling probes
 
         @disableDelay = new Delay
@@ -135,9 +134,8 @@ exports.Probe = class Probe extends EventEmitter
                 hits: @hits
                 args: v
                 error: err
-            consumerIds = if consumerId? then [consumerId] else @consumerIds
-            @emit 'sample', sample, consumerIds
-            callback null, sample, consumerIds if callback?
+            @emit 'sample', sample, consumerId
+            callback null, sample, consumerId if callback?
 
         if args?
             go null, args, timestamp
@@ -173,16 +171,11 @@ exports.Probe = class Probe extends EventEmitter
         if not enabled
             timer.stop() for consumerId, timer of @consumerTimers
             @consumerTimers = {}
-            @consumerIds = []
 
     enableForConsumer: (consumerId, interval, probeKey) ->
 
         # register consumer
-        if @instant
-            newConsumerId = -1 is @consumerIds.indexOf consumerId
-            if newConsumerId
-                @consumerIds.push consumerId # yes, interval is ignored for instant sampling
-        else
+        if not @instant
             newConsumerId =  not @consumerTimers.hasOwnProperty consumerId
             if newConsumerId
                 @sampleByInterval consumerId, interval
@@ -190,7 +183,7 @@ exports.Probe = class Probe extends EventEmitter
         # enable with delayed disabling
         @enabled = true
         @disableDelay.start PROBE_DISABLE_DELAY, =>
-            console.log 'disable', probeKey
+            #console.log 'disable', probeKey
             @setEnabled false
 
     sampleByInterval: (consumerId, interval) ->
@@ -203,10 +196,6 @@ exports.Probe = class Probe extends EventEmitter
             @sample consumerId
 
     stop: (consumerId) ->
-        index = @consumerIds.indexOf consumerId
-        if index isnt -1
-            @consumerIds.splice index, 1
-
         timer = @consumerTimers[consumerId]
         if timer?
             timer.stop()

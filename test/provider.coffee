@@ -178,7 +178,7 @@ describe 'Provider', ->
                 should.exist p.samples
 
                 mock = sinon.mock p.samples
-                mock.expects('publish').withArgs 'p.m.p1.c1', sinon.predicate (actual) ->
+                mock.expects('publish').withArgs 'p.m.p1.all', sinon.predicate (actual) ->
                     actual = BSON.deserialize actual
                     actual.provider.should.equal 'p'
                     actual.module.should.equal 'm'

@@ -108,8 +108,8 @@ exports.Provider = class Provider extends EventEmitter
         probe = new Probe name, args...
         name = name.name if typeof name is 'object'
         @probes[name] = probe
-        probe.on 'sample', (sample, consumerIds) =>
-            @emit 'sample', probe, sample, consumerIds
+        probe.on 'sample', (sample, consumerId) =>
+            @emit 'sample', probe, sample, consumerId
             return if not @samples?
             message =
                 provider: @config.name
@@ -123,20 +123,100 @@ exports.Provider = class Provider extends EventEmitter
             message = BSON.serialize message
             probeKey = "#{@config.name}.#{@module}.#{probe.name}"
             try
-                for consumerId in consumerIds
+                if probe.instant
+                    #console.log '@samples.publish', probeKey+'.all'
+                    @samples.publish probeKey+'.all', message
+                else if consumerId?
+                    #console.log '@samples.publish', probeKey+'.'+consumerId
                     @samples.publish probeKey+'.'+consumerId, message
             catch e
                 @disconnect()
         probe
 
     ###*
+     * # instrumentalize()
+     *
+     * Wraps a function so `func_enter` and `func_return` probes are updated before and after the function execution, respectively.
+     *
+     * If an object or a prototype is provided, all the functions down the hierarchy are instrumentalized.
+     *
+     * Examples:
+     *
+     *     // Instrumentalize a single function
+     *     obj.fn = provider.instrumentalize(obj.fn, {name: 'fn', scope: obj});
+     *
+     *     // Instrumentalize a prototype. All instances will be instrumentalized.
+     *     provider.instrumentalize(MyClass.prototype, {name: 'MyClass'});
+     *
+    ###
+    instrumentalize: (obj, options = {}) ->
+        if not @probes.func_enter?
+            @addProbe
+                name: 'func_enter'
+                instant: true
+                sampleThreshold: 0
+                types: ['object']
+        if not @probes.func_return?
+            @addProbe
+                name: 'func_return'
+                instant: true
+                sampleThreshold: 0
+                types: ['object']
+
+        options.summaryDepth = options.summaryDepth or 5
+
+        provider = this # current 'this' IS the provider.
+
+        if typeof obj is 'function'
+            return obj if obj.__notrace_instrumentalized
+            wrapper = (args...) ->
+                summarizedArgs = provider.summarize args, options.summaryDepth
+                provider.probes.func_enter.update options.name, summarizedArgs...
+                start = Date.now()
+                scope = if options.scope? then options.scope else this # current 'this' IS NOT the provider but the object instance.
+                result = obj.apply scope, args
+                elapsed = Date.now() - start
+                provider.probes.func_return.update options.name, elapsed: elapsed, result: provider.summarize result, options.summaryDepth
+                result
+            @markAsInstrumentalized wrapper
+            return wrapper
+
+        return if obj.__notrace_instrumentalized
+        baseName = if options.name? then options.name + '.' else ''
+        Object.keys(obj).forEach (key) =>
+            prop = obj[key]
+            if typeof prop is 'function'
+                obj[key] = @instrumentalize prop, name: baseName + key
+            else if typeof prop is 'object'
+                @instrumentalize prop
+        @markAsInstrumentalized obj
+
+    markAsInstrumentalized: (obj) ->
+        Object.defineProperty obj, '__notrace_instrumentalized',
+            value: true
+            enumerable: false
+            writable: false
+
+    summarize: (value, depth) ->
+        return '[stripped by probe]' if depth is 0
+        if typeof value is 'function'
+            '[function]'
+        else if value instanceof Array
+            value.map (x) => @summarize x, depth - 1
+        else if typeof value is 'object'
+            o = {}
+            for k,v of value
+                o[k] = @summarize v, depth - 1
+            o
+        else
+            value
+
+    ###*
      * # .update()
      *
      * Updates a probe.
      *
-     * Also checks if the probe exists and creates it if not,
-     * which adds overhead, so use this method only for prototyping probes.
-     * Prefer declaring the probe on provider creation and access it through 'probes' property.
+     * Also checks if the probe exists and creates it if not, which adds overhead, so use this method only for prototyping probes. Prefer declaring the probe on provider creation and access it through 'probes' property.
      *
      * Example:
      *     provider.update('cache_size', cache.size());
@@ -154,9 +234,7 @@ exports.Provider = class Provider extends EventEmitter
      *
      * Increments a probe.
      *
-     * Also checks if the probe exists and creates it if not,
-     * which adds overhead, so use this method only for prototyping probes.
-     * Prefer declaring the probe on provider creation and access it through 'probes' property.
+     * Also checks if the probe exists and creates it if not, which adds overhead, so use this method only for prototyping probes. Prefer declaring the probe on provider creation and access it through 'probes' property.
      *
      * Example:
      *     provider.increment('rows', rows);
@@ -174,9 +252,7 @@ exports.Provider = class Provider extends EventEmitter
      *
      * Updates a probe and emits a sample if possible.
      *
-     * Also checks if the probe exists and creates it if not,
-     * which adds overhead, so use this method only for prototyping probes.
-     * Prefer declaring the probe on provider creation and access it through 'probes' property.
+     * Also checks if the probe exists and creates it if not, which adds overhead, so use this method only for prototyping probes. Prefer declaring the probe on provider creation and access it through 'probes' property.
      *
      * Example:
      *     provider.sample('log', 'error', 'this is it!');
@@ -194,6 +270,7 @@ exports.Provider = class Provider extends EventEmitter
      * # .start()
      *
      * Starts the provider. This internally means connect to server.
+     *
      * Provider definitions can be reused across modules, so we must specify in what module we are.
      *
      * Example:
@@ -264,7 +341,7 @@ exports.Provider = class Provider extends EventEmitter
 
         doRequest = (probe, message) =>
             probeKey = "#{@config.name}.#{@module}.#{probe.name}"
-            console.log "#{message.request} #{probeKey}"
+            #console.log "#{message.request} #{probeKey}"
             switch message.request
                 when 'sample'
                     probe.sample message.consumerId

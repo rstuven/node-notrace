@@ -334,6 +334,7 @@ exports.Consumer = class Consumer
                     @queue = queue
                     #console.log "queue.bind #{@samples.name}, #{@probeKey}.#{@id}"
                     queue.bind @samples.name, @probeKey + '.' + @id
+                    queue.bind @samples.name, @probeKey + '.all'
 
                     #console.log 'queue subscribe'
                     # exclusive option is true so we have the same chance
@@ -341,7 +342,7 @@ exports.Consumer = class Consumer
                     queue.subscribe ack: false, exclusive: true
                     , (message) =>
                         message = BSON.deserialize message.data
-                        #console.log message
+                        #console.log 'queue:subscribe', message
                         @subject.onNext message if @subject?
 
                     # at least request a sample
