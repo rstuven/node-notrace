@@ -127,7 +127,7 @@ report =
             else if typeof v is 'boolean'
                 r = pad v.toString(), 15
                 r.yellow
-            else if v.constructor.name is 'Quantizer'
+            else if /Quantizer$/.test v.constructor.name
                 formatQuantizer v
             else
                 util.inspect v, false, 5, not program.nocolor

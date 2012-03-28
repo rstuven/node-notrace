@@ -1,3 +1,7 @@
+###*
+ * A frequency distribution of the values.
+ * Increments the count in the highest bucket that is less than the value.
+###
 exports.Quantizer = class Quantizer
 
     constructor: ->
@@ -6,21 +10,12 @@ exports.Quantizer = class Quantizer
         @maxIndex = -Infinity
         @maxCount = 0
 
-    add: do ->
-        log2 = Math.log 2
-        (value) ->
-            index = @unsign value, 0, (x) -> 1+Math.floor(Math.log(x) / log2)
-            @prepare index
-            count = ++@counts[index - @minIndex]
-            @maxCount = count if @maxCount < count
-
-    unsign: (x, n, fn) ->
-        if x is 0
-            0
-        else if x < 0
-            -fn(-x-n)
-        else
-            fn(x-n)
+    add: (value) ->
+        index = @valueIndex value
+        return if not index?
+        @prepare index
+        count = ++@counts[index - @minIndex]
+        @maxCount = count if @maxCount < count
 
     prepare: (index) ->
         return if index < @maxIndex and index > @minIndex
@@ -39,9 +34,53 @@ exports.Quantizer = class Quantizer
         @minIndex = minIndex
         @maxIndex = maxIndex
 
+    count: (index) ->
+        @counts[index - @minIndex]
+
+    indexValue: (index) ->
+        throw new Error 'Method not implemented.'
+
+    valueIndex: (value) ->
+        throw new Error 'Method not implemented.'
+
+###*
+ * A power-of-two frequency distribution of the values.
+ * Increments the count in the highest power-of-two bucket that is less than the value.
+###
+exports.Pow2Quantizer = class Pow2Quantizer extends Quantizer
+
     indexValue: (index) ->
         @unsign index, 1, ((x) -> Math.pow 2, x)
 
-    count: (index) ->
-        @counts[index - @minIndex]
+    valueIndex: do ->
+        log2 = Math.log 2
+        (value) ->
+            @unsign value, 0, (x) -> 1+Math.floor(Math.log(x) / log2)
+
+    unsign: (x, n, fn) ->
+        if x is 0
+            0
+        else if x < 0
+            -fn(-x-n)
+        else
+            fn(x-n)
+
+###*
+ * A linear frequency distribution of values between the specified bounds.
+ * Increments the count in the highest bucket that is less than the value.
+###
+exports.LinearQuantizer = class LinearQuantizer extends Quantizer
+
+    constructor: (@lowerBound, @upperBound, @stepValue) ->
+        throw new Error 'stepValue must be greater than 0.' if @stepValue <= 0
+        throw new Error 'upperBound must be greater than lowerBound.' if @upperBound <= @lowerBound
+        super()
+
+    indexValue: (index) ->
+        @lowerBound + index * @stepValue
+
+    valueIndex: (value) ->
+        return null if value < @lowerBound
+        return null if value > @upperBound
+        Math.ceil((value - @lowerBound) / @stepValue)
 

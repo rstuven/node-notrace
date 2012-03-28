@@ -5,12 +5,17 @@ rx = require 'rxjs'
 {BSON} = require 'bson/lib/bson/bson'
 {Delay} = require './timers'
 {Timer} = require './timers'
-{Quantizer} = require './quantizer'
+{Pow2Quantizer, LinearQuantizer} = require './quantizer'
 exchanges = require './exchanges'
 
 # define custom aggregate functions
 rx.Observable::quantize = () ->
-    @aggregate new Quantizer, (q, v) ->
+    @aggregate new Pow2Quantizer, (q, v) ->
+        q.add v
+        q
+
+rx.Observable::lquantize = (lb, ub, sv) ->
+    @aggregate new LinearQuantizer(lb, ub, sv), (q, v) ->
         q.add v
         q
 
@@ -122,6 +127,7 @@ exports.Consumer = class Consumer
      *    - *max(expression)*
      *    - *average(expression)*
      *    - *quantize(expression)*
+     *    - *lquantize(expression; lowerBound; upperBound; stepValue)*
      *  - Using `pair`, available aggregations are:
      *    - *elapsed_time()*
      *    - *delta(expression)*
@@ -415,7 +421,7 @@ exports.Consumer = class Consumer
                 \(
                     ([^;]*)         # first argument
                     (?:;            # separator is semicolon because arguments could be expressions with commas
-                    (.*)            # second argument
+                    (.*)            # more arguments
                     )?              #
                 \)
                 \s*                 # ignore spaces
@@ -426,11 +432,12 @@ exports.Consumer = class Consumer
             aggFn = aggMatches[1]
             aggBy = aggMatches[2]
             aggBy2 = aggMatches[3]
+            aggBy2 = aggBy2.replace /;/g, ',' if aggBy2?
             if aggBy? and aggBy.trim() isnt ''
                 aggCode = ".select(#{expression aggBy})"
             else
                 aggCode = ""
-            aggCode += ".#{highlight aggFn}()"
+            aggCode += ".#{highlight aggFn}(#{highlight aggBy2})"
             aggName = aggFn
         else
             aggCode = ".take(1)"

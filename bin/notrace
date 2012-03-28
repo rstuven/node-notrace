@@ -130,7 +130,7 @@
         } else if (typeof v === 'boolean') {
           r = pad(v.toString(), 15);
           return r.yellow;
-        } else if (v.constructor.name === 'Quantizer') {
+        } else if (/Quantizer$/.test(v.constructor.name)) {
           return formatQuantizer(v);
         } else {
           return util.inspect(v, false, 5, !program.nocolor);
