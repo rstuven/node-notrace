@@ -3,7 +3,7 @@ util = require 'util'
 colors = require 'colors'
 {Consumer} = require '..'
 
-version = JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version
+version = JSON.parse(require('fs').readFileSync(__dirname + '/../package.json', 'utf8')).version
 
 program
     .version(version)

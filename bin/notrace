@@ -10,7 +10,7 @@
 
   Consumer = require('..').Consumer;
 
-  version = JSON.parse(require('fs').readFileSync('package.json', 'utf8')).version;
+  version = JSON.parse(require('fs').readFileSync(__dirname + '/../package.json', 'utf8')).version;
 
   program.version(version).usage('[command] [options]').option('-C, --nocolor', 'Disable colors.');
 
