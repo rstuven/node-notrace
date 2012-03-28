@@ -58,7 +58,7 @@ html(lang='en')
          //- h1: a(href= (site.ghbaseurl) ? site.ghbaseurl : '/'): img(src=site.ghbaseurl + '/public/img/logo.png', title=site.title)
          h1: a(href= (site.ghbaseurl) ? site.ghbaseurl : '/')= site.title
         .description!= site.description
-        //- .gh
+        .gh
           h4 Latest Update to Github
           #commit
             span#latestCommitTime Loading...
