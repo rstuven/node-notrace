@@ -203,6 +203,7 @@
 <li><em>max(expression)</em></li>
 <li><em>average(expression)</em></li>
 <li><em>quantize(expression)</em></li>
+<li><em>lquantize(expression; lowerBound; upperBound; stepValue)</em></li>
 <li>Using <code>pair</code>, available aggregations are:</li>
 <li><em>elapsed_time()</em></li>
 <li><em>delta(expression)</em></li>
@@ -525,12 +526,13 @@ consumer.stop({
         aggFn = aggMatches[1];
         aggBy = aggMatches[2];
         aggBy2 = aggMatches[3];
+        if (aggBy2 != null) aggBy2 = aggBy2.replace(/;/g, ',');
         if ((aggBy != null) &amp;&amp; aggBy.trim() !== '') {
           aggCode = &quot;.select(&quot; + (expression(aggBy)) + &quot;)&quot;;
         } else {
           aggCode = &quot;&quot;;
         }
-        aggCode += &quot;.&quot; + (highlight(aggFn)) + &quot;()&quot;;
+        aggCode += &quot;.&quot; + (highlight(aggFn)) + &quot;(&quot; + (highlight(aggBy2)) + &quot;)&quot;;
         aggName = aggFn;
       } else {
         aggCode = &quot;.take(1)&quot;;
