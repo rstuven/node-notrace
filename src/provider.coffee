@@ -9,13 +9,40 @@ exchanges = require './exchanges'
 RECONNECT_INTERVAL = 5000 # time between reconnection checks
 
 ###*
- * This is instantiatied by applications that need to be instrumentalized.
- * A provider can be seen as the container of a category of probes.
+ * # Provider
+ *
+ * This class is instantiatied by applications that need to be instrumentalized. A provider can be seen as the container of a category of probes.
+ *
+ * All providers defines a probe by default: `_probes`. This probe returns all probes defined in its provider.
+ *
  * @class Provider
 ###
 exports.Provider = class Provider extends EventEmitter
 
     ###*
+     * Examples:
+     *     // Probes can be defined using sync or async functions:
+     *     // Not shown in this example, but this could be useful to call system stats tools.
+     *     // (eg. mpstat, iostat, etc.)
+     *     var p = new Provider({
+     *       name: 'myprovider',
+     *       probes: {
+     *         // sync
+     *         memory_heap_used: function () {
+     *           return process.memoryUsage().heapUsed;
+     *         },
+     *         // async
+     *         files_count: function (callback) {
+     *           fs.readdir('/some/path', function (err, files) {
+     *             if (err)
+     *               callback(err);
+     *             else
+     *               // there could be multiple calls to callback in the same function.
+     *               callback(null, files.length);
+     *           });
+     *         }
+     *       }
+     *     });
      * @constructor
      * @param {Object} config (Optional) The configuration object.
     ###
@@ -25,6 +52,20 @@ exports.Provider = class Provider extends EventEmitter
 
         @reconnectTimer = new Timer
 
+        ###*
+         * # .probes
+         *
+         * Gets defined probes.
+         *
+         * Example:
+         *     var provider = new Provider({
+         *         name: 'test',
+         *         probes: {
+         *             calls: ['number']
+         *         }
+         *     });
+         *     provider.probes.calls.increment();
+        ###
         @probes = {}
         if @config.probes?
             for name, args of @config.probes
@@ -48,7 +89,18 @@ exports.Provider = class Provider extends EventEmitter
                 undefined
 
     ###*
-     * Adds a probe.
+     * # .addProbe()
+     *
+     * Adds a probe definition.
+     *
+     * Examples:
+     *
+     *     provider.addProbe('msg', 'string');
+     *     provider.addProbe({
+     *       name: 'uptime',
+     *       args: function() { return process.uptime(); }
+     *     });
+     *
      * @param {String} name The name of the probe.
      * @param {params String} args The type of each argument.
     ###
@@ -78,11 +130,16 @@ exports.Provider = class Provider extends EventEmitter
         probe
 
     ###*
+     * # .update()
+     *
      * Updates a probe.
      *
      * Also checks if the probe exists and creates it if not,
      * which adds overhead, so use this method only for prototyping probes.
      * Prefer declaring the probe on provider creation and access it through 'probes' property.
+     *
+     * Example:
+     *     provider.update('cache_size', cache.size());
      *
      * @param {String} name The name of the probe.
      * @param {params} args The arguments of the probe.
@@ -93,11 +150,16 @@ exports.Provider = class Provider extends EventEmitter
         probe.update args...
 
     ###*
+     * # .increment()
+     *
      * Increments a probe.
      *
      * Also checks if the probe exists and creates it if not,
      * which adds overhead, so use this method only for prototyping probes.
      * Prefer declaring the probe on provider creation and access it through 'probes' property.
+     *
+     * Example:
+     *     provider.increment('rows', rows);
      *
      * @param {String} name The name of the probe.
      * @param {params} args The arguments of the probe increment.
@@ -108,11 +170,16 @@ exports.Provider = class Provider extends EventEmitter
         probe.increment args...
 
     ###*
+     * # .sample()
+     *
      * Updates a probe and emits a sample if possible.
      *
      * Also checks if the probe exists and creates it if not,
      * which adds overhead, so use this method only for prototyping probes.
      * Prefer declaring the probe on provider creation and access it through 'probes' property.
+     *
+     * Example:
+     *     provider.sample('log', 'error', 'this is it!');
      *
      * @param {String} name The name of the probe.
      * @param {params} args The arguments of the probe.
@@ -124,8 +191,15 @@ exports.Provider = class Provider extends EventEmitter
         probe.update args...
 
     ###*
-     * Starts the provider. This internally means connect to AMQP queues.
-     * @param {String} module The module that is hosting the provider instance.
+     * # .start()
+     *
+     * Starts the provider. This internally means connect to server.
+     * Provider definitions can be reused across modules, so we must specify in what module we are.
+     *
+     * Example:
+     *     provider.start('my_restful_api');
+     *
+     * @param {String} module The name of the module that is hosting the provider instance.
     ###
     start: (module) ->
         @module = module
@@ -135,10 +209,10 @@ exports.Provider = class Provider extends EventEmitter
         @reconnectTimer.start RECONNECT_INTERVAL, =>
             @connect() if not @connection?
 
-    ###*
-     * Connects to AMQP server.
-     * @private
-    ###
+    #
+    # Connects to server.
+    # @private
+    #
     connect: ->
         #console.log "Provider #{@config.name}.#{@module} connecting..."
 
@@ -200,16 +274,21 @@ exports.Provider = class Provider extends EventEmitter
                     probe.stop message.consumerId
 
     ###*
+     * # .stop()
+     *
      * Stops the provider.
+     *
+     * Example:
+     *     provider.stop();
     ###
     stop: ->
         @reconnectTimer.stop()
         @disconnect()
 
-    ###*
-     * Disconnects from AMQP server.
-     * @private
-    ###
+    #
+    # Disconnects from the server.
+    # @private
+    #
     disconnect: ->
         if @samples?
             @samples = null

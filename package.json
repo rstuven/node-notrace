@@ -1,7 +1,8 @@
 {
   "name": "notrace",
-  "author": "Ricardo Stuven <rstuven@gmail.com>",
+  "description": "Probing and monitoring library based on AMQP.",
   "version": "0.0.3",
+  "author": "Ricardo Stuven <rstuven@gmail.com>",
   "repository": {
     "type": "git",
     "url": "git://github.com/rstuven/node-notrace.git"
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "coffee-script": "*",
+    "codex": "*",
     "mocha": "*",
     "chai": "*",
     "sinon": "*",

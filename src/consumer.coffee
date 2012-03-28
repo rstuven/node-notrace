@@ -21,8 +21,10 @@ REQUEST_ENABLE_INTERVAL = 5000 # time between probe enabling requests. see also 
 REQUEST_SAMPLE_INTERVAL = 100 # time between probe sampling requests
 
 ###*
- * Consumer enables specific probes, receives samples
- * and provide facilities for aggregation of samples.
+ * # Consumer
+ *
+ * This class enables specific probes, receives samples and provide facilities for aggregation of samples.
+ *
  * @class Consumer
 ###
 exports.Consumer = class Consumer
@@ -38,9 +40,250 @@ exports.Consumer = class Consumer
         @connectionEndDelay = new Delay
 
     ###*
-     * Connects to AMQP server.
-     * @private
+     * # .sample()
+     * Requests a single sample using probe key.
+     * @param {String} probeKey The probe key with the format "provider.module.probe".
+     * @param {Function} callback The callback function receives a 'subject' argument.
     ###
+    sample: (probeKey, callback) ->
+        @start probeKey, (subject) =>
+            subject.subscribe (x) =>
+                callback x
+                @stop()
+
+    ###*
+     * # .start() [1]
+     *
+     * Starts a subscription to samples using probe key.
+     *
+     * A probe key has the format `provider.module.probe` and allows to use a `*` wildcard instead of each part. For example, the probe key `*.*.uptime` matches any probe named "uptime" of any provider in any module.
+     *
+     * The callback function receives a `subject` argument. Subject is an RxJS object that allows to subscribe to a stream of samples and processing them as they arrive using a powerful API.
+     *
+     * Examples:
+     *
+     * Receive a stream of samples.
+     *
+     *     consumer.start('*.*.myprobe', function (subject) {
+     *       subject.subscribe(function (sample) {
+     *         console.log(sample); // prints all arriving samples
+     *       });
+     *     });
+     *
+     * Calculate an average per second.
+     *
+     *     consumer.start('*.*.myprobe', function (subject) {
+     *       subject
+     *         .select(function (x) { return x.args[0]; })
+     *         .windowWithTime(1000)
+     *         .selectMany(function (win) { return win.average(); })
+     *         .subscribe(function (x) { console.log(x); }); // prints a number every second
+     *     });
+     *
+     * Calculate an average per second per module. Now this requires a little more involved use of bare RxJS. This can be simplified a lot using a `callbackConfig`.
+     *
+     *     consumer.start('*.*.myprobe', function (subject) {
+     *       subject
+     *         .windowWithTime(1000)
+     *         .selectMany(function (win) {
+     *           var agg = win
+     *             .groupBy(function (x) { return x.module; })
+     *             .selectMany(function (grp) {
+     *               return grp.count().select(function (x) { return { module: grp.key, count: x }; }).zip(
+     *                      grp.select(function (x) { return x.args[0]; }).average(),
+     *                          function (f, r) { f.average = r; return f; });
+     *             })
+     *             .aggregate([], function (acc, x) { acc.push(x); return acc; });
+     *           return agg;
+     *         })
+     *         .subscribe(function (x) { console.log(x); });
+     *         // prints every second something like: [ {module:'a', average: 123}, {module:'b', average: 456} ]
+     *     });
+     *
+     * @param {String} probeKey The probe key with the format "provider.module.probe".
+     * @param {Function} callback The callback function receives a 'subject' argument.
+    ###
+    ###*
+     * # .start() [2]
+     *
+     * Starts a subscription to samples using configuration objects.
+     *
+     * *callbackConfig* argument can have the following properties:
+     *
+     * - `mapbefore`: {String} Map expression before grouping and aggregating, evaluated right after `filterbefore`.
+     * - `mapafter`: {String} Map expression after grouping and aggregating, evaluated right before the callback.
+     * - `filterbefore`: {String} Filter using boolean expression at the beginning.
+     * - `filterafter`: {String} Filter using boolean expression, evaluated right before `mapafter`.
+     * - `aggregate`: {String} Aggregate function over expression.
+     *  - Available aggregation functions are:
+     *    - *count()*
+     *    - *sum(expression)*
+     *    - *min(expression)*
+     *    - *max(expression)*
+     *    - *average(expression)*
+     *    - *quantize(expression)*
+     *  - Using `pair`, available aggregations are:
+     *    - *elapsed_time()*
+     *    - *delta(expression)*
+     *    - *fraction(expression)*
+     *    - *rate_per_millisecond(expression)*
+     *    - *rate_per_second(expression)*
+     *    - *average(expression1, expression2)*
+     *    - *average_timer(expression1, expression2)*
+     *    - *multi_timer(expression1, expression2)*
+     *    - *multi_timer_inverse(expression1, expression2)*
+     * - `aggregate2`: {String} Aggregate function to apply after `aggregate` with `pair`. Requires no `group` be specified.
+     * - `group`: {String} Group expression.
+     * - `window`: {String} Time window in the format `span[,shift]`. `span` is the length of each window. `[,shift]` is the optional interval between creation of consecutive windows.
+     * - `pair`: {Boolean} Pair previous and current sample. Requires `aggregate` and no `group` be specified.
+     * - `callback`: {Function} Callback function that receives result of processing.
+     *
+     * Expressions required above are strings containing JavaScript expressions. Sample properties are available as variables, unless a mapping or aggregating operation is applied.
+     *
+     * Examples:
+     *
+     * During 5 seconds, count how many samples per module there are:
+     *
+     *     consumer.start('*.*.random_walk', {
+     *         aggregate: 'count()',
+     *         group: 'module',
+     *         callback: function(result) { console.log(result); }
+     *     });
+     *     consumer.stop({wait: 5000});
+     *
+     * During 1500 ms, every 500 ms, take a 1 second of samples, group them by module and average the first argument:
+     *
+     *     consumer.start('*.*.random_walk', {
+     *         aggregate: 'average(args[0])',
+     *         group: 'module',
+     *         window: '1000,500',
+     *         callback: function(result) { console.log(result); }
+     *     });
+     *     consumer.stop({wait: 1500});
+     *
+     * During 1 second, calculate the differences between a value and the next, then aggregate them all using quantize:
+     *
+     *     consumer.start('*.*.random_walk', {
+     *         pair: true,
+     *         aggregate: 'delta(args[0])',
+     *         aggregate2: 'quantize',
+     *         callback: function(result) { console.log(result); }
+     *     });
+     *     consumer.stop({wait: 1000});
+     *
+     * During 1 second, filter all values below 20, count per every 100 ms, filter counts above 0:
+     *
+     *     consumer.start({
+     *       probeKey: '*.*.random',
+     *       sampleInterval: 1 // request the matching probes to emit a sample every 1 millisecond.
+     *     }, {
+     *         filterbefore: 'args[1] < 20',
+     *         window: '100',
+     *         aggregate: 'count()',
+     *         filterafter: 'count > 0',
+     *         callback: function(sample) { console.log(sample); }
+     *     });
+     *     consumer.stop({wait: 1000});
+     *
+     * @param {Object} probeConfig The probe configuration object.
+     * @param {Object} callbackConfig The callback configuration object.
+    ###
+    start: (config, callback) ->
+
+        if @isBusy()
+            throw new Error 'Consumer is busy. It must stop first.'
+
+        if typeof callback is 'object'
+            @start config, (subject) ->
+                generateObservable(callback, subject)
+                    .subscribe callback.callback
+            return
+
+        if typeof config is 'string'
+            probeKey = config
+        else
+            probeKey = config.probeKey
+
+        if config? and config.sampleInterval?
+            @sampleInterval = config.sampleInterval
+        else
+            @sampleInterval = REQUEST_SAMPLE_INTERVAL
+
+        # fill with asteriks where ommitted
+        probeKey = probeKey.replace /^\./, '*.'
+        probeKey = probeKey.replace /\.$/, '.*'
+        probeKey = probeKey.replace /\.\./, '.*.'
+
+        @probeKey = probeKey
+
+        # subscribe
+        @subject = new rx.Subject
+        callback @subject
+
+        # connect
+        @connect()
+        @reconnectTimer.start RECONNECT_INTERVAL, =>
+            @connect() if not @connection?
+
+    ###*
+     * # .stop()
+     *
+     * Stops the current subscription to samples.
+     *
+     * It can be configured to wait a time before stopping (by default is immediate) and disconnect right away (by default, the connections remains open for some time, which is good for new subscriptions but a console application, for example, won't exit until the connection ends).
+     *
+     * Examples:
+     *     consumer.stop(); // stop receiving samples, stay connected for the next subscription.
+     *
+     *     consumer.stop({
+     *         wait: 5000, // stop after 5 seconds.
+     *         disconnect: true
+     *     });
+     *
+     * @param {Object} config.
+    ###
+    stop: (config = {}) ->
+        if config.wait?
+            wait = config.wait
+            delete config.wait
+            setTimeout =>
+                @stop config
+            , wait
+            return
+
+        @reconnectTimer.stop()
+        @requestEnableTimer.stop()
+        @request @probeKey, 'stop'
+        if @subject?
+            @subject.onCompleted()
+            @subject = null
+        if @queue?
+            @queue.destroy()
+            @queue = null
+        @disconnect config.disconnect is true
+
+    #
+    # Publishes commands in the 'requests' exchange.
+    # @param {String} probeKey The probe key with the format "provider.module.probe".
+    # @param {String} request The request command.
+    #
+    request: (probeKey, request, args...) ->
+        return if not @requests?
+        message =
+            request: request
+            probeKey: probeKey
+            consumerId: @id
+            args: args
+        message = BSON.serialize message
+        try
+            @requests.publish probeKey, message
+        catch e
+            @disconnect()
+
+    #
+    # Connects to server.
+    # @private
+    #
     connect: ->
 
         @connectionEndDelay.stop()
@@ -63,10 +306,10 @@ exports.Consumer = class Consumer
         @connection.on 'ready', =>
             @open()
 
-    ###*
-     * Open AMQP exchanges and subscribe to queues.
-     * @private
-    ###
+    #
+    # Open AMQP exchanges and subscribe to queues.
+    # @private
+    #
     open: ->
         exchanges.requests @connection, (exchange) =>
             return if not @connection?
@@ -99,8 +342,11 @@ exports.Consumer = class Consumer
                     @request @probeKey, 'sample'
 
     ###*
-     * Disconnects from AMQP server.
-     * @private
+     * # .disconnect()
+     *
+     * Disconnects from server.
+     *
+     * @param {Boolean} immediate Specifies whether to disconnect immediately or to wait a few seconds 
     ###
     disconnect: (immediate = true) ->
         if @samples?
@@ -119,110 +365,22 @@ exports.Consumer = class Consumer
                     @connection = null
 
     ###*
-     * Requests a single sample using routing key.
-     * @param {String} probeKey The probe routing key with the format "provider.module.probe".
-     * @param {Function} callback The callback function receives a 'subject' argument.
-    ###
-    sample: (probeKey, callback) ->
-        @start probeKey, (subject) =>
-            subject.subscribe (x) =>
-                callback x
-                @stop()
-
-    ###*
-     * Gets the busy state.
+     * # .isBusy()
+     * Gets the busy state. When a subscription starts, we say the consumer is busy. When the subscription stops, the consumer is not busy.
      * @return {Boolean} The busy state.
     ###
     isBusy: ->
         @subject?
 
-    ###*
-     * Publishes commands in the 'requests' exchange.
-     * @param {String} probeKey The probe routing key with the format "provider.module.probe".
-     * @param {String} request The request command.
-    ###
-    request: (probeKey, request, args...) ->
-        return if not @requests?
-        message =
-            request: request
-            probeKey: probeKey
-            consumerId: @id
-            args: args
-        message = BSON.serialize message
-        try
-            @requests.publish probeKey, message
-        catch e
-            @disconnect()
 
     ###*
-     * Starts a subscription to samples using routing key.
-     * @param {String} probeKey The probe routing key with the format "provider.module.probe".
-     * @param {Function} callback The callback function receives a 'subject' argument.
+     * # RxJS query generation.
+     * Please, view source.
     ###
-    start: (config, callback) ->
-
-        if @isBusy()
-            throw new Error 'Consumer is busy. It must stop first.'
-
-        if typeof callback is 'object'
-            @start config, (subject) ->
-                Consumer.generateObservable(callback, subject)
-                    .subscribe callback.callback
-            return
-
-        if typeof config is 'string'
-            probeKey = config
-        else
-            probeKey = config.probeKey
-
-        if config? and config.sampleInterval?
-            @sampleInterval = config.sampleInterval
-        else
-            @sampleInterval = REQUEST_SAMPLE_INTERVAL
-
-        # fill with asteriks where ommitted
-        probeKey = probeKey.replace /^\./, '*.'
-        probeKey = probeKey.replace /\.$/, '.*'
-        probeKey = probeKey.replace /\.\./, '.*.'
-
-        @probeKey = probeKey
-
-        # subscribe
-        @subject = new rx.Subject
-        callback @subject
-
-        # connect
-        @connect()
-        @reconnectTimer.start RECONNECT_INTERVAL, =>
-            @connect() if not @connection?
-
-    ###*
-     * Stops the current subscription to samples.
-    ###
-    stop: (config = {}) ->
-        if config.wait?
-            wait = config.wait
-            delete config.wait
-            setTimeout =>
-                @stop config
-            , wait
-            return
-
-        @reconnectTimer.stop()
-        @requestEnableTimer.stop()
-        @request @probeKey, 'stop'
-        if @subject?
-            @subject.onCompleted()
-            @subject = null
-        if @queue?
-            @queue.destroy()
-            @queue = null
-        @disconnect config.disconnect is true
-
-    ###*
-     * @param {Object} config The configuration object
-    ###
-    Consumer.generateObservable = (config, subject) ->
+    #
+    # @param {Object} config The configuration object
+    #
+    generateObservable = (config, subject) ->
 
         # create a function to evaluate a expression within sample context
         # in a way "this" is a reference to our "global" object.
@@ -302,7 +460,7 @@ exports.Consumer = class Consumer
 
         if config.aggregate? and config.pair and not config.group?
             code += "s = s.zip(s.skip(1), function(p,c){return {prev:p, cur:c};});"
-            code += "s = s.select(function(_){return calculate('#{highlight aggFn}'"
+            code += "s = s.select(function(_){return pairAggregation('#{highlight aggFn}'"
             code += ",#{expression aggBy}"
             code += ",#{expression aggBy2}"
             code += ",_.prev, _.cur);});"
@@ -328,11 +486,15 @@ exports.Consumer = class Consumer
         code = code.stripColors
 
         # compile code and execute it
-        func = new Function 'subject', 'calculate', code
-        func.call {}, subject, calculate
+        func = new Function 'subject', 'pairAggregation', code
+        func.call {}, subject, pairAggregation
 
+    ###*
+     * # Pair aggregation.
+     * Please, view source.
+    ###
     # see http://msdn.microsoft.com/en-us/library/system.diagnostics.performancecountertype.aspx
-    calculate = (type, nFn, dFn, sampleOld, sampleNew) ->
+    pairAggregation = (type, nFn, dFn, sampleOld, sampleNew) ->
 
         n0 = nFn sampleOld
         n1 = nFn sampleNew

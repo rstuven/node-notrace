@@ -1,8 +1,9 @@
 SRC = src
 LIB = lib
 BIN = bin
+DOC = doc
 
-all: clean js bin
+all: clean js bin codex
 
 js:
 	@echo "coffee => js"
@@ -20,8 +21,11 @@ bin:
 clean:
 	@rm -rf $(LIB)
 	@rm -rf $(BIN)
+	@rm -rf $(DOC)/out
 
 test: all
 	@mocha -R spec
 
-
+codex:
+	@echo "js => doc"
+	@codex build -i doc

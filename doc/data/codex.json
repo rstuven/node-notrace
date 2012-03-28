@@ -1,0 +1,38 @@
+{
+    "locals": {
+        "title": "NoTrace",
+        "ghuser": "rstuven",
+        "ghbaseurl": "",
+        "ghproject": "node-notrace",
+        "tweetvia": "zxrs",
+        "tweetrelated": "zxrs",
+        "version": "0.0.4",
+        "hasdownloads": false,
+        "description": "Probing and monitoring library based on AMQP."
+    },
+    "plugins": [
+        {
+            "name": "code",
+            "files": [
+                {
+                    "name": "consumer",
+                    "title": "Consumer",
+                    "file": "../../lib/consumer.js",
+                    "description": "Why  a description here? Is this rendered or just for documenting codex.json file?"
+                },
+                {
+                    "name": "provider",
+                    "title": "Provider",
+                    "file": "../../lib/provider.js",
+                    "description": "Why  a description here? Is this rendered or just for documenting codex.json file?"
+                },
+                {
+                    "name": "probe",
+                    "title": "Probe",
+                    "file": "../../lib/probe.js",
+                    "description": "Why  a description here? Is this rendered or just for documenting codex.json file?"
+                }
+            ]
+        }
+    ]
+}

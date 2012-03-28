@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>API Documentation for Provider - NoTrace
+    </title>
+    <script type="text/javascript">var ghuser = 'rstuven'
+  , ghproject = 'node-notrace';
+
+</script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7/jquery.min.js"></script>
+    <script src="/public/js/jq-mousewheel.js"></script>
+    <script src="/public/js/antiscroll.js"></script>
+    <script src="/public/js/prettify.js"></script>
+    <script src="/public/js/main.js"></script>
+    <link rel="stylesheet" href="/public/css/antiscroll.css" type="text/css" media="all">
+    <link rel="stylesheet" href="/public/css/main.css" type="text/css" media="all">
+    <link href="http://fonts.googleapis.com/css?family=Lato:300|Redressed" rel="stylesheet" type="text/css">
+  </head>
+  <body>
+    <nav>
+      <div class="box-wrap antiscroll-wrap">
+        <div class="box">
+          <div class="antiscroll-inner">
+            <div class="box-inner">
+              <ul class="sections">
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="pages">
+        <li><a href="/">Home</a>
+        </li>
+      </ul>
+      <ul class="code">
+        <li><a href="/code/consumer.html">Consumer</a>
+        </li>
+        <li><a href="/code/provider.html">Provider</a>
+        </li>
+        <li><a href="/code/probe.html">Probe</a>
+        </li>
+      </ul>
+    </nav>
+    <header>
+      <h1><a href="/">NoTrace</a>
+      </h1>
+      <div class="description"><p>Probing and monitoring library based on AMQP.</p>
+
+      </div>
+    </header>
+    <section id="content">
+      <div id="code">
+        <article id="undefined-section" class="codeblock">
+          <div class="header"><h1>Provider</h1>
+          </div>
+          <div class="tags">
+            <div class="tag"><span class="type">&#64;class</span><span class="desc">Provider</span>
+            </div>
+          </div>
+          <div class="description"><p>This class is instantiatied by applications that need to be instrumentalized. A provider can be seen as the container of a category of probes.</p>
+
+<p>All providers defines a probe by default: <code>_probes</code>. This probe returns all probes defined in its provider.</p>
+          </div>
+          <div class="view-source">View Source
+          </div>
+          <div class="code-wrap">
+            <pre class="source prettyprint"><code>exports.Provider = Provider = (function(_super) {
+
+    __extends(Provider, _super);</code>
+            </pre>
+          </div>
+        </article>
+        <article id="undefined-section" class="codeblock">
+          <div class="header"><h2>Examples</h2>
+
+<pre><code>// Probes can be defined using sync or async functions:
+// Not shown in this example, but this could be useful to call system stats tools.
+// (eg. mpstat, iostat, etc.)
+var p = new Provider({
+  name: 'myprovider',
+  probes: {
+    // sync
+    memory_heap_used: function () {
+      return process.memoryUsage().heapUsed;
+    },
+    // async
+    files_count: function (callback) {
+      fs.readdir('/some/path', function (err, files) {
+        if (err)
+          callback(err);
+        else
+          // there could be multiple calls to callback in the same function.
+          callback(null, files.length);
+      });
+    }
+  }
+});
+</code></pre>
+          </div>
+          <div class="tags">
+            <div class="tag"><span class="type">&#64;constructor</span><span class="desc"></span>
+            </div>
+            <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; Object &#125;</span><span class="name">config</span><span class="desc">(Optional) The configuration object.</span>
+            </div>
+          </div>
+          <div class="description">
+          </div>
+          <div class="view-source">View Source
+          </div>
+          <div class="code-wrap">
+            <pre class="source prettyprint"><code>function Provider(config) {
+      var args, name, _ref,
+        _this = this;
+      this.config = config;
+      if (!(this.config != null) || !(this.config.name != null)) {
+        throw new Error(&quot;Argument missing: config.name&quot;);
+      }
+      this.reconnectTimer = new Timer;</code>
+            </pre>
+          </div>
+        </article>
+        <article id="undefined-section" class="codeblock">
+          <div class="header"><h1>.probes</h1>
+          </div>
+          <div class="description"><p>Gets defined probes.</p>
+
+<h2>Example</h2>
+
+<pre><code>var provider = new Provider({
+    name: 'test',
+    probes: {
+        calls: ['number']
+    }
+});
+provider.probes.calls.increment();
+</code></pre>
+          </div>
+          <div class="view-source">View Source
+          </div>
+          <div class="code-wrap">
+            <pre class="source prettyprint"><code>this.probes = {};
+      if (this.config.probes != null) {
+        _ref = this.config.probes;
+        for (name in _ref) {
+          args = _ref[name];
+          if (typeof args === 'function') {
+            args = {
+              args: args
+            };
+          }
+          args.name = name;
+          this.addProbe(args);
+        }
+      }
+      this.addProbe({
+        name: '_probes',
+        sampleThreshold: 0,
+        instant: true,
+        types: ['object'],
+        args: function(cb) {
+          var name, probe, _ref2;
+          _ref2 = _this.probes;
+          for (name in _ref2) {
+            probe = _ref2[name];
+            cb(null, {
+              name: name,
+              types: probe.types,
+              instant: probe.instant,
+              sampleThreshold: probe.sampleThreshold
+            });
+          }
+          return;
+        }
+      });
+    }</code>
+            </pre>
+          </div>
+        </article>
+        <article id="undefined-section" class="codeblock">
+          <div class="header"><h1>.addProbe()</h1>
+          </div>
+          <div class="tags">
+            <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; String &#125;</span><span class="name">name</span><span class="desc">The name of the probe.</span>
+            </div>
+            <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; params &#125;</span><span class="name">String}</span><span class="desc">args The type of each argument.</span>
+            </div>
+          </div>
+          <div class="description"><p>Adds a probe definition.</p>
+
+<h2>Examples</h2>
+
+<pre><code>provider.addProbe('msg', 'string');
+provider.addProbe({
+  name: 'uptime',
+  args: function() { return process.uptime(); }
+});
+</code></pre>
+          </div>
+          <div class="view-source">View Source
+          </div>
+          <div class="code-wrap">
+            <pre class="source prettyprint"><code>Provider.prototype.addProbe = function() {
+      var args, name, probe,
+        _this = this;
+      name = arguments[0], args = 2 &lt;= arguments.length ? __slice.call(arguments, 1) : [];
+      probe = (function(func, args, ctor) {
+        ctor.prototype = func.prototype;
+        var child = new ctor, result = func.apply(child, args);
+        return typeof result === &quot;object&quot; ? result : child;
+      })(Probe, [name].concat(__slice.call(args)), function() {});
+      if (typeof name === 'object') name = name.name;
+      this.probes[name] = probe;
+      probe.on('sample', function(sample, consumerIds) {
+        var consumerId, message, probeKey, _i, _len, _results;
+        _this.emit('sample', probe, sample, consumerIds);
+        if (!(_this.samples != null)) return;
+        message = {
+          provider: _this.config.name,
+          module: _this.module,
+          probe: probe.name,
+          timestamp: sample.timestamp,
+          hits: sample.hits
+        };
+        if (sample.args != null) message.args = sample.args;
+        if (sample.error != null) message.error = sample.error.toString();
+        message = BSON.serialize(message);
+        probeKey = &quot;&quot; + _this.config.name + &quot;.&quot; + _this.module + &quot;.&quot; + probe.name;
+        try {
+          _results = [];
+          for (_i = 0, _len = consumerIds.length; _i &lt; _len; _i++) {
+            consumerId = consumerIds[_i];
+            _results.push(_this.samples.publish(probeKey + '.' + consumerId, message));
+          }
+          return _results;
+        } catch (e) {
+          return _this.disconnect();
+        }
+      });
+      return probe;
+    };</code>
+            </pre>
+          </div>
+        </article>
+        <article id="undefined-section" class="codeblock">
+          <div class="header"><h1>.update()</h1>
+          </div>
+          <div class="tags">
+            <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; String &#125;</span><span class="name">name</span><span class="desc">The name of the probe.</span>
+            </div>
+            <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; params &#125;</span><span class="name">args</span><span class="desc">The arguments of the probe.</span>
+            </div>
+          </div>
+          <div class="description"><p>Updates a probe.</p>
+
+<p>Also checks if the probe exists and creates it if not,<br />which adds overhead, so use this method only for prototyping probes.<br />Prefer declaring the probe on provider creation and access it through 'probes' property.</p>
+
+<h2>Example</h2>
+
+<pre><code>provider.update('cache_size', cache.size());
+</code></pre>
+          </div>
+          <div class="view-source">View Source
+          </div>
+          <div class="code-wrap">
+            <pre class="source prettyprint"><code>Provider.prototype.update = function() {
+      var args, name, probe;
+      name = arguments[0], args = 2 &lt;= arguments.length ? __slice.call(arguments, 1) : [];
+      probe = this.probes[name.name || name];
+      if (!(probe != null)) probe = this.addProbe(name);
+      return probe.update.apply(probe, args);
+    };</code>
+            </pre>
+          </div>
+        </article>
+        <article id="undefined-section" class="codeblock">
+          <div class="header"><h1>.increment()</h1>
+          </div>
+          <div class="tags">
+            <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; String &#125;</span><span class="name">name</span><span class="desc">The name of the probe.</span>
+            </div>
+            <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; params &#125;</span><span class="name">args</span><span class="desc">The arguments of the probe increment.</span>
+            </div>
+          </div>
+          <div class="description"><p>Increments a probe.</p>
+
+<p>Also checks if the probe exists and creates it if not,<br />which adds overhead, so use this method only for prototyping probes.<br />Prefer declaring the probe on provider creation and access it through 'probes' property.</p>
+
+<h2>Example</h2>
+
+<pre><code>provider.increment('rows', rows);
+</code></pre>
+          </div>
+          <div class="view-source">View Source
+          </div>
+          <div class="code-wrap">
+            <pre class="source prettyprint"><code>Provider.prototype.increment = function() {
+      var args, name, probe;
+      name = arguments[0], args = 2 &lt;= arguments.length ? __slice.call(arguments, 1) : [];
+      probe = this.probes[name.name || name];
+      if (!(probe != null)) probe = this.addProbe(name);
+      return probe.increment.apply(probe, args);
+    };</code>
+            </pre>
+          </div>
+        </article>
+        <article id="undefined-section" class="codeblock">
+          <div class="header"><h1>.sample()</h1>
+          </div>
+          <div class="tags">
+            <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; String &#125;</span><span class="name">name</span><span class="desc">The name of the probe.</span>
+            </div>
+            <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; params &#125;</span><span class="name">args</span><span class="desc">The arguments of the probe.</span>
+            </div>
+          </div>
+          <div class="description"><p>Updates a probe and emits a sample if possible.</p>
+
+<p>Also checks if the probe exists and creates it if not,<br />which adds overhead, so use this method only for prototyping probes.<br />Prefer declaring the probe on provider creation and access it through 'probes' property.</p>
+
+<h2>Example</h2>
+
+<pre><code>provider.sample('log', 'error', 'this is it!');
+</code></pre>
+          </div>
+          <div class="view-source">View Source
+          </div>
+          <div class="code-wrap">
+            <pre class="source prettyprint"><code>Provider.prototype.sample = function() {
+      var args, name, probe;
+      name = arguments[0], args = 2 &lt;= arguments.length ? __slice.call(arguments, 1) : [];
+      probe = this.probes[name.name || name];
+      if (!(probe != null)) probe = this.addProbe(name);
+      probe.instant = true;
+      return probe.update.apply(probe, args);
+    };</code>
+            </pre>
+          </div>
+        </article>
+        <article id="undefined-section" class="codeblock">
+          <div class="header"><h1>.start()</h1>
+          </div>
+          <div class="tags">
+            <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; String &#125;</span><span class="name">module</span><span class="desc">The name of the module that is hosting the provider instance.</span>
+            </div>
+          </div>
+          <div class="description"><p>Starts the provider. This internally means connect to server.<br />Provider definitions can be reused across modules, so we must specify in what module we are.</p>
+
+<h2>Example</h2>
+
+<pre><code>provider.start('my_restful_api');
+</code></pre>
+          </div>
+          <div class="view-source">View Source
+          </div>
+          <div class="code-wrap">
+            <pre class="source prettyprint"><code>Provider.prototype.start = function(module) {
+      var _this = this;
+      this.module = module;
+      this.connect();
+      return this.reconnectTimer.start(RECONNECT_INTERVAL, function() {
+        if (!(_this.connection != null)) return _this.connect();
+      });
+    };
+
+    Provider.prototype.connect = function() {
+      var doRequest, host, processRequestMessage,
+        _this = this;
+      host = this.config.host || 'localhost';
+      this.connection = amqp.createConnection({
+        host: host
+      });
+      this.connection.on('error', function(err) {
+        console.log(err);
+        return _this.disconnect();
+      });
+      this.connection.on('ready', function() {
+        exchanges.samples(_this.connection, function(exchange) {
+          if (!(_this.connection != null)) return;
+          return _this.samples = exchange;
+        });
+        return exchanges.requests(_this.connection, function(exchange) {
+          if (!(_this.connection != null)) return;
+          _this.requests = exchange;
+          return _this.connection.queue('', function(queue) {
+            queue.bind(exchange.name, '');
+            return queue.subscribe({
+              ack: false,
+              exclusive: true
+            }, processRequestMessage);
+          });
+        });
+      });
+      processRequestMessage = function(message) {
+        var matches, probeName, probes;
+        message = BSON.deserialize(message.data);
+        if (!(message.request != null)) return;
+        if (!(message.probeKey != null)) return;
+        if (!(message.consumerId != null)) return;
+        matches = /^([^\.]+)\.([^\.]+)\.([^\.]+)$/.exec(message.probeKey);
+        if (!(matches != null)) return;
+        if (['*', _this.config.name].indexOf(matches[1]) === -1) return;
+        if (['*', _this.module].indexOf(matches[2]) === -1) return;
+        probeName = matches[3];
+        probes = probeName === '*' ? Object.keys(_this.probes) : [probeName];
+        return probes.forEach(function(probeName) {
+          var probe;
+          probe = _this.probes[probeName];
+          if (probe != null) return doRequest(probe, message);
+        });
+      };
+      return doRequest = function(probe, message) {
+        var probeKey;
+        probeKey = &quot;&quot; + _this.config.name + &quot;.&quot; + _this.module + &quot;.&quot; + probe.name;
+        console.log(&quot;&quot; + message.request + &quot; &quot; + probeKey);
+        switch (message.request) {
+          case 'sample':
+            return probe.sample(message.consumerId);
+          case 'enable':
+            return probe.enableForConsumer(message.consumerId, message.args[0], probeKey);
+          case 'stop':
+            return probe.stop(message.consumerId);
+        }
+      };
+    };</code>
+            </pre>
+          </div>
+        </article>
+        <article id="undefined-section" class="codeblock">
+          <div class="header"><h1>.stop()</h1>
+          </div>
+          <div class="description"><p>Stops the provider.</p>
+
+<h2>Example</h2>
+
+<pre><code>provider.stop();
+</code></pre>
+          </div>
+          <div class="view-source">View Source
+          </div>
+          <div class="code-wrap">
+            <pre class="source prettyprint"><code>Provider.prototype.stop = function() {
+      this.reconnectTimer.stop();
+      return this.disconnect();
+    };
+
+    Provider.prototype.disconnect = function() {
+      if (this.samples != null) this.samples = null;
+      if (this.requests != null) this.requests = null;
+      if (this.connection != null) {
+        this.connection.end();
+        return this.connection = null;
+      }
+    };
+
+    return Provider;
+
+  })(EventEmitter);
+
+}).call(this);</code>
+            </pre>
+          </div>
+        </article>
+      </div>
+    </section>
+    <footer>
+      <div class="branding">NoTrace site generated by&nbsp;<a href="http://codexjs.com">codex</a>, based on chai template.
+
+      </div>
+    </footer>
+  </body>
+</html>
