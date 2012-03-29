@@ -75,6 +75,8 @@ exports.LinearQuantizer = class LinearQuantizer extends Quantizer
         throw new Error 'stepValue must be greater than 0.' if @stepValue <= 0
         throw new Error 'upperBound must be greater than lowerBound.' if @upperBound <= @lowerBound
         super()
+        @prepare @valueIndex @lowerBound
+        @prepare @valueIndex @upperBound
 
     indexValue: (index) ->
         @lowerBound + index * @stepValue
