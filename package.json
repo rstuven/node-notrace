@@ -1,7 +1,7 @@
 {
   "name": "notrace",
   "description": "Probing and monitoring library based on AMQP.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "author": "Ricardo Stuven <rstuven@gmail.com>",
   "repository": {
     "type": "git",
