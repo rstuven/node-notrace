@@ -10,4 +10,5 @@ http://rstuven.github.com/node-notrace/
 
 # CLI usage
 
-    notrace --help
+    notrace list --help
+    notrace sample --help
