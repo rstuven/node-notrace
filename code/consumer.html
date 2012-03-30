@@ -438,6 +438,7 @@ consumer.stop({
             if (!(_this.connection != null)) return;
             _this.queue = queue;
             queue.bind(_this.samples.name, _this.probeKey + '.' + _this.id);
+            queue.bind(_this.samples.name, _this.probeKey + '.all');
             queue.subscribe({
               ack: false,
               exclusive: true

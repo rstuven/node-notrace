@@ -94,7 +94,6 @@
       var config, types;
       config = arguments[0], types = 2 &lt;= arguments.length ? __slice.call(arguments, 1) : [];
       this.id = uuid();
-      this.consumerIds = [];
       this.consumerTimers = {};
       this.disableDelay = new Delay;
       if (typeof config === 'string') {
@@ -161,9 +160,13 @@
         <article id="undefined-section" class="codeblock">
           <div class="header"><h1>.instant</h1>
 
-<p>Gets the instant property value.</p>
+<p>Gets or sets the instant property value.</p>
           </div>
-          <div class="description">
+          <div class="description"><p>If true, the probe will emit a sample right after a change (see <code>update</code> and <code>increment</code> methods).</p>
+
+<p>If false, consumers must request samples for a specific time interval. See <code>start</code> method of <code>Consumer</code>.</p>
+
+<p>Set this property only at initialization. DO NOT modify it after the probe starts operating.</p>
           </div>
           <div class="view-source">View Source
           </div>
@@ -305,16 +308,15 @@
       }
       this.lastTimestamp = now;
       go = function(err, v, ts) {
-        var consumerIds, sample;
+        var sample;
         sample = {
           timestamp: ts || Date.now(),
           hits: _this.hits,
           args: v,
           error: err
         };
-        consumerIds = consumerId != null ? [consumerId] : _this.consumerIds;
-        _this.emit('sample', sample, consumerIds);
-        if (callback != null) return callback(null, sample, consumerIds);
+        _this.emit('sample', sample, consumerId);
+        if (callback != null) return callback(null, sample, consumerId);
       };
       if (args != null) {
         return go(null, args, timestamp);
@@ -349,59 +351,41 @@
       }
     };
 
-    Probe.prototype.setEnabled = function(enabled) {
-      var consumerId, timer, _ref;
-      this.enabled = enabled;
-      if (!enabled) {
-        _ref = this.consumerTimers;
-        for (consumerId in _ref) {
-          timer = _ref[consumerId];
-          timer.stop();
-        }
-        this.consumerTimers = {};
-        return this.consumerIds = [];
-      }
-    };
-
     Probe.prototype.enableForConsumer = function(consumerId, interval, probeKey) {
-      var newConsumerId,
-        _this = this;
-      if (this.instant) {
-        newConsumerId = -1 === this.consumerIds.indexOf(consumerId);
-        if (newConsumerId) this.consumerIds.push(consumerId);
-      } else {
-        newConsumerId = !this.consumerTimers.hasOwnProperty(consumerId);
-        if (newConsumerId) this.sampleByInterval(consumerId, interval);
-      }
-      this.enabled = true;
-      return this.disableDelay.start(PROBE_DISABLE_DELAY, function() {
-        console.log('disable', probeKey);
-        return _this.setEnabled(false);
-      });
-    };
-
-    Probe.prototype.sampleByInterval = function(consumerId, interval) {
       var timer,
         _this = this;
-      if (interval === 0) return;
-      timer = this.consumerTimers[consumerId];
-      if (!(timer != null)) {
-        timer = new Timer;
-        this.consumerTimers[consumerId] = timer;
+      this.enabled = true;
+      if (!this.instant) {
+        if (interval &gt; 0 &amp;&amp; !(this.consumerTimers[consumerId] != null)) {
+          timer = new Timer;
+          this.consumerTimers[consumerId] = timer;
+          timer.start(interval, function() {
+            return _this.sample(consumerId);
+          });
+        }
+        return this.disableDelay.start(PROBE_DISABLE_DELAY, function() {
+          var consumerId, timer, _ref;
+          _this.enabled = false;
+          _ref = _this.consumerTimers;
+          for (consumerId in _ref) {
+            timer = _ref[consumerId];
+            timer.stop();
+          }
+          return _this.consumerTimers = {};
+        });
       }
-      return timer.start(interval, function() {
-        return _this.sample(consumerId);
-      });
     };
 
     Probe.prototype.stop = function(consumerId) {
-      var index, timer;
-      index = this.consumerIds.indexOf(consumerId);
-      if (index !== -1) this.consumerIds.splice(index, 1);
-      timer = this.consumerTimers[consumerId];
-      if (timer != null) {
-        timer.stop();
-        return delete this.consumerTimers[consumerId];
+      var timer;
+      if (this.instant) {
+        return this.enabled = false;
+      } else {
+        timer = this.consumerTimers[consumerId];
+        if (timer != null) {
+          timer.stop();
+          return delete this.consumerTimers[consumerId];
+        }
       }
     };
 

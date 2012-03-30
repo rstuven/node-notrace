@@ -234,9 +234,9 @@ provider.addProbe({
       })(Probe, [name].concat(__slice.call(args)), function() {});
       if (typeof name === 'object') name = name.name;
       this.probes[name] = probe;
-      probe.on('sample', function(sample, consumerIds) {
-        var consumerId, message, probeKey, _i, _len, _results;
-        _this.emit('sample', probe, sample, consumerIds);
+      probe.on('sample', function(sample, consumerId) {
+        var message, probeKey;
+        _this.emit('sample', probe, sample, consumerId);
         if (!(_this.samples != null)) return;
         message = {
           provider: _this.config.name,
@@ -250,17 +250,125 @@ provider.addProbe({
         message = BSON.serialize(message);
         probeKey = &quot;&quot; + _this.config.name + &quot;.&quot; + _this.module + &quot;.&quot; + probe.name;
         try {
-          _results = [];
-          for (_i = 0, _len = consumerIds.length; _i &lt; _len; _i++) {
-            consumerId = consumerIds[_i];
-            _results.push(_this.samples.publish(probeKey + '.' + consumerId, message));
+          if (probe.instant) {
+            return _this.samples.publish(probeKey + '.all', message);
+          } else if (consumerId != null) {
+            return _this.samples.publish(probeKey + '.' + consumerId, message);
           }
-          return _results;
         } catch (e) {
           return _this.disconnect();
         }
       });
       return probe;
+    };</code>
+            </pre>
+          </div>
+        </article>
+        <article id="undefined-section" class="codeblock">
+          <div class="header"><h1>instrumentalize()</h1>
+          </div>
+          <div class="description"><p>Wraps a function so <code>func_enter</code> and <code>func_return</code> probes are updated before and after the function execution, respectively.</p>
+
+<p>If an object or a prototype is provided, all the functions down the hierarchy are instrumentalized.</p>
+
+<h2>Examples</h2>
+
+<pre><code>// Instrumentalize a single function
+obj.fn = provider.instrumentalize(obj.fn, {name: 'fn', scope: obj});
+
+// Instrumentalize a prototype. All instances will be instrumentalized.
+provider.instrumentalize(MyClass.prototype, {name: 'MyClass'});
+</code></pre>
+          </div>
+          <div class="view-source">View Source
+          </div>
+          <div class="code-wrap">
+            <pre class="source prettyprint"><code>Provider.prototype.instrumentalize = function(obj, options) {
+      var baseName, provider, wrapper,
+        _this = this;
+      if (options == null) options = {};
+      if (!(this.probes.func_enter != null)) {
+        this.addProbe({
+          name: 'func_enter',
+          instant: true,
+          sampleThreshold: 0,
+          types: ['object']
+        });
+      }
+      if (!(this.probes.func_return != null)) {
+        this.addProbe({
+          name: 'func_return',
+          instant: true,
+          sampleThreshold: 0,
+          types: ['object']
+        });
+      }
+      options.summaryDepth = options.summaryDepth || 5;
+      provider = this;
+      if (typeof obj === 'function') {
+        if (obj.__notrace_instrumentalized) return obj;
+        wrapper = function() {
+          var args, elapsed, result, scope, start, summarizedArgs, _ref;
+          args = 1 &lt;= arguments.length ? __slice.call(arguments, 0) : [];
+          summarizedArgs = provider.summarize(args, options.summaryDepth);
+          (_ref = provider.probes.func_enter).update.apply(_ref, [options.name].concat(__slice.call(summarizedArgs)));
+          start = Date.now();
+          scope = options.scope != null ? options.scope : this;
+          result = obj.apply(scope, args);
+          elapsed = Date.now() - start;
+          provider.probes.func_return.update(options.name, {
+            elapsed: elapsed,
+            result: provider.summarize(result, options.summaryDepth)
+          });
+          return result;
+        };
+        this.markAsInstrumentalized(wrapper);
+        return wrapper;
+      }
+      if (obj.__notrace_instrumentalized) return;
+      baseName = options.name != null ? options.name + '.' : '';
+      Object.keys(obj).forEach(function(key) {
+        var prop;
+        prop = obj[key];
+        if (typeof prop === 'function') {
+          return obj[key] = _this.instrumentalize(prop, {
+            name: baseName + key
+          });
+        } else if (typeof prop === 'object') {
+          return _this.instrumentalize(prop);
+        }
+      });
+      return this.markAsInstrumentalized(obj);
+    };
+
+    Provider.prototype.markAsInstrumentalized = function(obj) {
+      return Object.defineProperty(obj, '__notrace_instrumentalized', {
+        value: true,
+        enumerable: false,
+        writable: false
+      });
+    };
+
+    Provider.prototype.summarize = function(value, depth) {
+      var k, o, v,
+        _this = this;
+      if (depth === 0) return '[stripped by probe]';
+      if (typeof value === 'function') {
+        return '[function]';
+      } else if (value instanceof Array) {
+        return value.map(function(x) {
+          return _this.summarize(x, depth - 1);
+        });
+      } else if (typeof value === 'object') {
+        o = {};
+        for (k in value) {
+          v = value[k];
+          o[k] = this.summarize(v, depth - 1);
+        }
+        return o;
+      } else {
+        return value;
+      }
     };</code>
             </pre>
           </div>
@@ -276,7 +384,7 @@ provider.addProbe({
           </div>
           <div class="description"><p>Updates a probe.</p>
 
-<p>Also checks if the probe exists and creates it if not,<br />which adds overhead, so use this method only for prototyping probes.<br />Prefer declaring the probe on provider creation and access it through 'probes' property.</p>
+<p>Also checks if the probe exists and creates it if not, which adds overhead, so use this method only for prototyping probes. Prefer declaring the probe on provider creation and access it through 'probes' property.</p>
 
 <h2>Example</h2>
 
@@ -307,7 +415,7 @@ provider.addProbe({
           </div>
           <div class="description"><p>Increments a probe.</p>
 
-<p>Also checks if the probe exists and creates it if not,<br />which adds overhead, so use this method only for prototyping probes.<br />Prefer declaring the probe on provider creation and access it through 'probes' property.</p>
+<p>Also checks if the probe exists and creates it if not, which adds overhead, so use this method only for prototyping probes. Prefer declaring the probe on provider creation and access it through 'probes' property.</p>
 
 <h2>Example</h2>
 
@@ -338,7 +446,7 @@ provider.addProbe({
           </div>
           <div class="description"><p>Updates a probe and emits a sample if possible.</p>
 
-<p>Also checks if the probe exists and creates it if not,<br />which adds overhead, so use this method only for prototyping probes.<br />Prefer declaring the probe on provider creation and access it through 'probes' property.</p>
+<p>Also checks if the probe exists and creates it if not, which adds overhead, so use this method only for prototyping probes. Prefer declaring the probe on provider creation and access it through 'probes' property.</p>
 
 <h2>Example</h2>
 
@@ -366,7 +474,9 @@ provider.addProbe({
             <div class="tag"><span class="type">&#64;param</span><span class="types">&#123; String &#125;</span><span class="name">module</span><span class="desc">The name of the module that is hosting the provider instance.</span>
             </div>
           </div>
-          <div class="description"><p>Starts the provider. This internally means connect to server.<br />Provider definitions can be reused across modules, so we must specify in what module we are.</p>
+          <div class="description"><p>Starts the provider. This internally means connect to server.</p>
+
+<p>Provider definitions can be reused across modules, so we must specify in what module we are.</p>
 
 <h2>Example</h2>
 
@@ -434,7 +544,6 @@ provider.addProbe({
       return doRequest = function(probe, message) {
         var probeKey;
         probeKey = &quot;&quot; + _this.config.name + &quot;.&quot; + _this.module + &quot;.&quot; + probe.name;
-        console.log(&quot;&quot; + message.request + &quot; &quot; + probeKey);
         switch (message.request) {
           case 'sample':
             return probe.sample(message.consumerId);
