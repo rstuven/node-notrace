@@ -56,7 +56,14 @@ exports.Probe = class Probe extends EventEmitter
 
         ###*
          * # .instant
-         * Gets the instant property value.
+         * Gets or sets the instant property value.
+         *
+         * If true, the probe will emit a sample right after a change (see `update` and `increment` methods).
+         *
+         * If false, consumers must request samples for a specific time interval. See `start` method of `Consumer`.
+         *
+         * Set this property only at initialization. DO NOT modify it after the probe starts operating.
+         *
         ###
         @instant = config.instant is true # it's false by default
 
@@ -166,38 +173,32 @@ exports.Probe = class Probe extends EventEmitter
         else
             callback null, args
 
-    setEnabled: (enabled) ->
-        @enabled = enabled
-        if not enabled
-            timer.stop() for consumerId, timer of @consumerTimers
-            @consumerTimers = {}
-
     enableForConsumer: (consumerId, interval, probeKey) ->
 
-        # register consumer
-        if not @instant
-            newConsumerId =  not @consumerTimers.hasOwnProperty consumerId
-            if newConsumerId
-                @sampleByInterval consumerId, interval
-
-        # enable with delayed disabling
         @enabled = true
-        @disableDelay.start PROBE_DISABLE_DELAY, =>
-            #console.log 'disable', probeKey
-            @setEnabled false
 
-    sampleByInterval: (consumerId, interval) ->
-        return if interval is 0
-        timer = @consumerTimers[consumerId]
-        if not timer?
-            timer = new Timer
-            @consumerTimers[consumerId] = timer
-        timer.start interval, =>
-            @sample consumerId
+        if not @instant
+
+            # register consumer
+            if interval > 0 and not @consumerTimers[consumerId]?
+                timer = new Timer
+                @consumerTimers[consumerId] = timer
+                timer.start interval, =>
+                    @sample consumerId
+
+            # enable with delayed disabling
+            @disableDelay.start PROBE_DISABLE_DELAY, =>
+                #console.log 'disable', probeKey
+                @enabled = false
+                timer.stop() for consumerId, timer of @consumerTimers
+                @consumerTimers = {}
 
     stop: (consumerId) ->
-        timer = @consumerTimers[consumerId]
-        if timer?
-            timer.stop()
-            delete @consumerTimers[consumerId]
+        if @instant
+            @enabled = false
+        else
+            timer = @consumerTimers[consumerId]
+            if timer?
+                timer.stop()
+                delete @consumerTimers[consumerId]
 

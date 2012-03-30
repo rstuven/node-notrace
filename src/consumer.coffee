@@ -345,7 +345,8 @@ exports.Consumer = class Consumer
                         #console.log 'queue:subscribe', message
                         @subject.onNext message if @subject?
 
-                    # at least request a sample
+                    # we don't which probes are instant beforehand,
+                    # so we always request at least one sample.
                     @request @probeKey, 'sample'
 
     ###*
