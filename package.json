@@ -18,7 +18,7 @@
   "dependencies": {
     "bson": "*",
     "rxjs": "*",
-    "amqp": "=0.1.1",
+    "amqp": "=0.1.3",
     "commander": "*",
     "colors": "*",
     "uuid-v4.js": "*"
@@ -30,7 +30,7 @@
     "chai": "*",
     "sinon": "*",
     "sinon-chai": "*",
-    "amqp-mock": "git://github.com/rstuven/node-amqp-mock.git#amqp-0.1.1"
+    "amqp-mock": "git://github.com/rstuven/node-amqp-mock.git#amqp-0.1.3"
   },
   "optionalDependencies": {}
 }
