@@ -11,7 +11,7 @@ RECONNECT_INTERVAL = 5000 # time between reconnection checks
 ###*
  * # Provider
  *
- * This class is instantiatied by applications that need to be instrumentalized. A provider can be seen as the container of a category of probes.
+ * This class is instantiatied by applications that need to be instrumented. A provider can be seen as the container of a category of probes.
  *
  * All providers defines a probe by default: `_probes`. This probe returns all probes defined in its provider.
  *
@@ -134,22 +134,22 @@ exports.Provider = class Provider extends EventEmitter
         probe
 
     ###*
-     * # instrumentalize()
+     * # instrument()
      *
      * Wraps a function so `func_enter` and `func_return` probes are updated before and after the function execution, respectively.
      *
-     * If an object or a prototype is provided, all the functions down the hierarchy are instrumentalized.
+     * If an object or a prototype is provided, all the functions down the hierarchy are instrumented.
      *
      * Examples:
      *
-     *     // Instrumentalize a single function
-     *     obj.fn = provider.instrumentalize(obj.fn, {name: 'fn', scope: obj});
+     *     // Instrument a single function
+     *     obj.fn = provider.instrument(obj.fn, {name: 'fn', scope: obj});
      *
-     *     // Instrumentalize a prototype. All instances will be instrumentalized.
-     *     provider.instrumentalize(MyClass.prototype, {name: 'MyClass'});
+     *     // Instrument a prototype. All instances will be instrumented.
+     *     provider.instrument(MyClass.prototype, {name: 'MyClass'});
      *
     ###
-    instrumentalize: (obj, options = {}) ->
+    instrument: (obj, options = {}) ->
         if not @probes.func_enter?
             @addProbe
                 name: 'func_enter'
@@ -168,7 +168,7 @@ exports.Provider = class Provider extends EventEmitter
         provider = this # current 'this' IS the provider.
 
         if typeof obj is 'function'
-            return obj if obj.__notrace_instrumentalized
+            return obj if obj.__notrace_instrumented
             wrapper = (args...) ->
                 summarizedArgs = provider.summarize args, options.summaryDepth
                 provider.probes.func_enter.update options.name, summarizedArgs...
@@ -178,21 +178,21 @@ exports.Provider = class Provider extends EventEmitter
                 elapsed = Date.now() - start
                 provider.probes.func_return.update options.name, elapsed: elapsed, result: provider.summarize result, options.summaryDepth
                 result
-            @markAsInstrumentalized wrapper
+            @markAsInstrumented wrapper
             return wrapper
 
-        return if obj.__notrace_instrumentalized
+        return if obj.__notrace_instrumented
         baseName = if options.name? then options.name + '.' else ''
         Object.keys(obj).forEach (key) =>
             prop = obj[key]
             if typeof prop is 'function'
-                obj[key] = @instrumentalize prop, name: baseName + key
+                obj[key] = @instrument prop, name: baseName + key
             else if typeof prop is 'object'
-                @instrumentalize prop
-        @markAsInstrumentalized obj
+                @instrument prop
+        @markAsInstrumented obj
 
-    markAsInstrumentalized: (obj) ->
-        Object.defineProperty obj, '__notrace_instrumentalized',
+    markAsInstrumented: (obj) ->
+        Object.defineProperty obj, '__notrace_instrumented',
             value: true
             enumerable: false
             writable: false

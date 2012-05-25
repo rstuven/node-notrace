@@ -23,15 +23,15 @@ var provider = new Provider({name: 'example'});
 provider.start('instrum');
 
 var obj1 = new MyClass1();
-obj1.method = provider.instrumentalize(obj1.method, {name: 'MyClass1.method', scope: obj1});
+obj1.method = provider.instrument(obj1.method, {name: 'MyClass1.method', scope: obj1});
 
-provider.instrumentalize(MyClass2.prototype, {name: 'MyClass2'});
+provider.instrument(MyClass2.prototype, {name: 'MyClass2'});
 
 var consumer = new Consumer();
 consumer.start('example.instrum.*', function(subject) {
   subject.subscribe(function(sample) {
     if (sample.probe !== '_probes')
-        console.log(sample.args[1]);
+        console.log(sample.probe, sample.args[0], sample.args[1]);
   });
 });
 
