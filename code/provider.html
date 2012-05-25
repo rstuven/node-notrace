@@ -81,7 +81,7 @@
             <div class="tag"><span class="type">&#64;class</span><span class="desc">Provider</span>
             </div>
           </div>
-          <div class="description"><p>This class is instantiatied by applications that need to be instrumentalized. A provider can be seen as the container of a category of probes.</p>
+          <div class="description"><p>This class is instantiatied by applications that need to be instrumented. A provider can be seen as the container of a category of probes.</p>
 
 <p>All providers defines a probe by default: <code>_probes</code>. This probe returns all probes defined in its provider.</p>
           </div>
@@ -265,25 +265,25 @@ provider.addProbe({
           </div>
         </article>
         <article id="undefined-section" class="codeblock">
-          <div class="header"><h1>instrumentalize()</h1>
+          <div class="header"><h1>instrument()</h1>
           </div>
           <div class="description"><p>Wraps a function so <code>func_enter</code> and <code>func_return</code> probes are updated before and after the function execution, respectively.</p>
 
-<p>If an object or a prototype is provided, all the functions down the hierarchy are instrumentalized.</p>
+<p>If an object or a prototype is provided, all the functions down the hierarchy are instrumented.</p>
 
 <h2>Examples</h2>
 
-<pre><code>// Instrumentalize a single function
-obj.fn = provider.instrumentalize(obj.fn, {name: 'fn', scope: obj});
+<pre><code>// Instrument a single function
+obj.fn = provider.instrument(obj.fn, {name: 'fn', scope: obj});
 
-// Instrumentalize a prototype. All instances will be instrumentalized.
-provider.instrumentalize(MyClass.prototype, {name: 'MyClass'});
+// Instrument a prototype. All instances will be instrumented.
+provider.instrument(MyClass.prototype, {name: 'MyClass'});
 </code></pre>
           </div>
           <div class="view-source">View Source
           </div>
           <div class="code-wrap">
-            <pre class="source prettyprint"><code>Provider.prototype.instrumentalize = function(obj, options) {
+            <pre class="source prettyprint"><code>Provider.prototype.instrument = function(obj, options) {
       var baseName, provider, wrapper,
         _this = this;
       if (options == null) options = {};
@@ -306,7 +306,7 @@ provider.instrumentalize(MyClass.prototype, {name: 'MyClass'});
       options.summaryDepth = options.summaryDepth || 5;
       provider = this;
       if (typeof obj === 'function') {
-        if (obj.__notrace_instrumentalized) return obj;
+        if (obj.__notrace_instrumented) return obj;
         wrapper = function() {
           var args, elapsed, result, scope, start, summarizedArgs, _ref;
           args = 1 &lt;= arguments.length ? __slice.call(arguments, 0) : [];
@@ -322,27 +322,27 @@ provider.instrumentalize(MyClass.prototype, {name: 'MyClass'});
           });
           return result;
         };
-        this.markAsInstrumentalized(wrapper);
+        this.markAsInstrumented(wrapper);
         return wrapper;
       }
-      if (obj.__notrace_instrumentalized) return;
+      if (obj.__notrace_instrumented) return;
       baseName = options.name != null ? options.name + '.' : '';
       Object.keys(obj).forEach(function(key) {
         var prop;
         prop = obj[key];
         if (typeof prop === 'function') {
-          return obj[key] = _this.instrumentalize(prop, {
+          return obj[key] = _this.instrument(prop, {
             name: baseName + key
           });
         } else if (typeof prop === 'object') {
-          return _this.instrumentalize(prop);
+          return _this.instrument(prop);
         }
       });
-      return this.markAsInstrumentalized(obj);
+      return this.markAsInstrumented(obj);
     };
 
-    Provider.prototype.markAsInstrumentalized = function(obj) {
-      return Object.defineProperty(obj, '__notrace_instrumentalized', {
+    Provider.prototype.markAsInstrumented = function(obj) {
+      return Object.defineProperty(obj, '__notrace_instrumented', {
         value: true,
         enumerable: false,
         writable: false
