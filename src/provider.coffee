@@ -109,6 +109,8 @@ exports.Provider = class Provider extends EventEmitter
         name = name.name if typeof name is 'object'
         @probes[name] = probe
         probe.on 'sample', (sample, consumerId) =>
+            #console.log sample
+            #console.log @samples?
             @emit 'sample', probe, sample, consumerId
             return if not @samples?
             message =
@@ -170,8 +172,21 @@ exports.Provider = class Provider extends EventEmitter
         if typeof obj is 'function'
             return obj if obj.__notrace_instrumented
             wrapper = (args...) ->
+
+                if options.callback
+                    callback = args[args.length - 1]
+                    if typeof callback is 'function'
+                        args[args.length - 1] = (cbargs...) ->
+                            elapsed = Date.now() - start
+                            summarizedArgs = provider.summarize cbargs, options.summaryDepth
+                            provider.probes.func_enter.update options.name + ' <callback>', callback: true, elapsed: elapsed, args: summarizedArgs
+                            result = callback cbargs...
+                            elapsed = Date.now() - start
+                            provider.probes.func_return.update options.name + ' <callback>', callback: true, elapsed: elapsed, result: provider.summarize result, options.summaryDepth
+                            result
+
                 summarizedArgs = provider.summarize args, options.summaryDepth
-                provider.probes.func_enter.update options.name, summarizedArgs...
+                provider.probes.func_enter.update options.name, args: summarizedArgs
                 start = Date.now()
                 scope = if options.scope? then options.scope else this # current 'this' IS NOT the provider but the object instance.
                 result = obj.apply scope, args
@@ -186,7 +201,8 @@ exports.Provider = class Provider extends EventEmitter
         Object.keys(obj).forEach (key) =>
             prop = obj[key]
             if typeof prop is 'function'
-                obj[key] = @instrument prop, name: baseName + key
+                callback = options.callback is true or (options.callback instanceof Array and options.callback.indexOf(key) isnt -1)
+                obj[key] = @instrument prop, name: baseName + key, callback: callback
             else if typeof prop is 'object'
                 @instrument prop
         @markAsInstrumented obj
