@@ -282,7 +282,7 @@ exports.Consumer = class Consumer
             args: args
         message = BSON.serialize message
         try
-            @requests.publish probeKey, message
+            @requests.publish '', message
         catch e
             @disconnect()
 
