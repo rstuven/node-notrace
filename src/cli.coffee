@@ -13,7 +13,6 @@ program
 Object.getPrototypeOf(program).commonOptions = ->
     this
         .option('-p, --probe [provider.module.probe]', 'Probe key. (default: *.*.*)', '*.*.*')
-        .option('-t, --timeout [milliseconds]', 'Time to wait before disconnect. (default: 1000)', Number, 1000)
         .option('-R, --report [object|pretty]', 'Report format. (default: pretty)', 'pretty')
 
 consumer = new Consumer
@@ -41,12 +40,13 @@ program
                     types: p.types
                 )
                 .subscribe report[command.report]
-        doTimeout command.timeout
+        doTimeout 1000
 
 program
     .command('sample')
     .description('Subscribe to probe samples')
     .commonOptions()
+    .option('-t, --timeout [milliseconds]', 'Time to wait before disconnect. (default: Infinity)', Number, Infinity)
     .option('-m, --mapbefore <expression>', 'Map expression before processing, right after --filterbefore.')
     .option('-M, --mapafter <expression>', 'Map expression after processing, right before the callback')
     .option('-f, --filterbefore <expression>', 'Filter using boolean expression at the beginning.')
