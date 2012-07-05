@@ -178,20 +178,31 @@ exports.Provider = class Provider extends EventEmitter
                     if typeof callback is 'function'
                         args[args.length - 1] = (cbargs...) ->
                             elapsed = Date.now() - start
-                            summarizedArgs = provider.summarize cbargs, options.summaryDepth
-                            provider.probes.func_enter.update options.name + ' <callback>', callback: true, elapsed: elapsed, args: summarizedArgs
+                            if provider.probes.func_enter.updateable() # ask before calling 'summarize'
+                                provider.probes.func_enter.update options.name + ' <callback>',
+                                    callback: true
+                                    elapsed: elapsed
+                                    args: provider.summarize cbargs, options.summaryDepth
                             result = callback cbargs...
                             elapsed = Date.now() - start
-                            provider.probes.func_return.update options.name + ' <callback>', callback: true, elapsed: elapsed, result: provider.summarize result, options.summaryDepth
+                            if provider.probes.func_return.updateable() # ask before calling 'summarize'
+                                provider.probes.func_return.update options.name + ' <callback>',
+                                    callback: true
+                                    elapsed: elapsed
+                                    result: provider.summarize result, options.summaryDepth
                             result
 
-                summarizedArgs = provider.summarize args, options.summaryDepth
-                provider.probes.func_enter.update options.name, args: summarizedArgs
+                if provider.probes.func_enter.updateable() # ask before calling 'summarize'
+                    provider.probes.func_enter.update options.name,
+                        args: provider.summarize args, options.summaryDepth
                 start = Date.now()
                 scope = if options.scope? then options.scope else this # current 'this' IS NOT the provider but the object instance.
                 result = obj.apply scope, args
                 elapsed = Date.now() - start
-                provider.probes.func_return.update options.name, elapsed: elapsed, result: provider.summarize result, options.summaryDepth
+                if provider.probes.func_return.updateable() # ask before calling 'summarize'
+                    provider.probes.func_return.update options.name,
+                        elapsed: elapsed
+                        result: provider.summarize result, options.summaryDepth
                 result
             @markAsInstrumented wrapper
             return wrapper
@@ -203,7 +214,7 @@ exports.Provider = class Provider extends EventEmitter
             if typeof prop is 'function'
                 callback = options.callback is true or (options.callback instanceof Array and options.callback.indexOf(key) isnt -1)
                 obj[key] = @instrument prop, name: baseName + key, callback: callback
-            else if typeof prop is 'object'
+            else if typeof prop is 'object' and prop isnt null
                 @instrument prop
         @markAsInstrumented obj
 
@@ -214,7 +225,7 @@ exports.Provider = class Provider extends EventEmitter
             writable: false
 
     summarize: (value, depth) ->
-        return '[stripped by probe]' if depth is 0
+        return '[stripped by provider]' if depth is 0
         if typeof value is 'function'
             '[function]'
         else if value instanceof Array

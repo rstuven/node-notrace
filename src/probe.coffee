@@ -110,6 +110,9 @@ exports.Probe = class Probe extends EventEmitter
             @evaluate @args, (err, evaluated, timestamp) =>
                 @sample null, null, evaluated, timestamp
 
+    updateable: ->
+        @enabled and @instant
+
     ###*
      * # .increment()
      *
