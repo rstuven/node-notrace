@@ -23,7 +23,7 @@ clean:
 	@rm -rf $(BIN)
 
 test: all
-	@mocha -R spec
+	@mocha -R spec --compilers coffee:coffee-script/register
 
 doc: all
 	@echo "js => doc"

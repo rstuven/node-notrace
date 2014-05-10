@@ -144,7 +144,7 @@ describe 'Probe', ->
             setTimeout ->
                 spy.should.have.been.calledTwice
                 done()
-            , 10
+            , 20
 
         it 'should return a timestamp', (done) ->
             p = new Probe 'p'
