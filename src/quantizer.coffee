@@ -1,6 +1,6 @@
 ###*
  * A frequency distribution of the values.
- * Increments the count in the highest bucket that is less than the value.
+ * Increments the count in the highest bucket that is lower than the value.
 ###
 exports.Quantizer = class Quantizer
 
