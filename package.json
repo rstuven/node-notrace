@@ -17,7 +17,16 @@
     "bin": "mkdir bin && echo #!/usr/bin/env node | cat - ./lib/cli.js > ./bin/notrace && rm ./lib/cli.js && chmod +x ./bin/notrace",
     "all": "npm run clean && npm run js && npm run bin",
     "doc": "npm run all && codex build -i ./doc -o ../node-notrace-doc",
-    "test": "npm run all && mocha -R spec --compilers coffee:coffee-script/register"
+    "test": "npm run all && mocha -R spec",
+    "test-cov" : "mocha -r blanket -R html-cov > coverage.html",
+    "test-cov-text": "mocha -r blanket -R mocha-text-cov",
+    "test-coveralls": "mocha -r blanket -R mocha-lcov-reporter | coveralls"
+  },
+  "config": {
+    "blanket": {
+      "pattern": "lib",
+      "data-cover-never": "node_modules"
+    }
   },
   "engines": {
     "node": ">=0.12.0"
@@ -31,9 +40,13 @@
     "uuid-v4.js": "*"
   },
   "devDependencies": {
+    "blanket": "git://github.com/alex-seville/blanket.git",
     "coffee-script": "*",
     "codex": "*",
+    "coveralls": "^2.11.2",
     "mocha": "*",
+    "mocha-lcov-reporter": "0.0.2",
+    "mocha-text-cov": "^0.1.0",
     "chai": "*",
     "sinon": "*",
     "sinon-chai": "*",
