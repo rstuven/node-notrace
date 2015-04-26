@@ -52,7 +52,7 @@
     return doTimeout(1000);
   });
 
-  program.command('sample').description('Subscribe to probe samples').commonOptions().option('-t, --timeout [milliseconds]', 'Time to wait before disconnect. (default: Infinity)', Number, Infinity).option('-m, --mapbefore <expression>', 'Map expression before processing, right after --filterbefore.').option('-M, --mapafter <expression>', 'Map expression after processing, right before the callback').option('-f, --filterbefore <expression>', 'Filter using boolean expression at the beginning.').option('-F, --filterafter <expression>', 'Filter using boolean expression right before --mapafter.').option('-a, --aggregate <function(expression)>', 'Aggregate expression.').option('-A, --aggregate2 <function>', 'Aggregate function to apply after --aggregate with --pair.\n' + '                                        Requires no --group.').option('-g, --group <expression>', 'Group expression.').option('-w, --window <span>[,shift]', 'Time window. <span> is the length of each window.\n' + '                                        [,shift] is the interval between creation of consecutive windows.').option('-i, --interval <milliseconds>', 'Sampling interval.').option('-P, --pair', 'Pair previous and current sample. Requires --aggregate and no --group.').action(function(command) {
+  program.command('sample').description('Subscribe to probe samples').commonOptions().option('-t, --timeout [milliseconds]', 'Time to wait before disconnect. (default: Infinity)', Number).option('-m, --mapbefore <expression>', 'Map expression before processing, right after --filterbefore.').option('-M, --mapafter <expression>', 'Map expression after processing, right before the callback').option('-f, --filterbefore <expression>', 'Filter using boolean expression at the beginning.').option('-F, --filterafter <expression>', 'Filter using boolean expression right before --mapafter.').option('-a, --aggregate <function(expression)>', 'Aggregate expression.').option('-A, --aggregate2 <function>', 'Aggregate function to apply after --aggregate with --pair.\n' + '                                        Requires no --group.').option('-g, --group <expression>', 'Group expression.').option('-w, --window <span>[,shift]', 'Time window. <span> is the length of each window.\n' + '                                        [,shift] is the interval between creation of consecutive windows.').option('-i, --interval <milliseconds>', 'Sampling interval.').option('-P, --pair', 'Pair previous and current sample. Requires --aggregate and no --group.').action(function(command) {
     consumer.start({
       probeKey: command.probe,
       sampleInterval: command.interval
@@ -78,6 +78,9 @@
   };
 
   doTimeout = function(timeout) {
+    if (timeout == null) {
+      return;
+    }
     return setTimeout(function() {
       return exit(0);
     }, timeout);

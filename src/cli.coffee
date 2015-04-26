@@ -46,7 +46,7 @@ program
 .command('sample')
 .description('Subscribe to probe samples')
 .commonOptions()
-.option('-t, --timeout [milliseconds]', 'Time to wait before disconnect. (default: Infinity)', Number, Infinity)
+.option('-t, --timeout [milliseconds]', 'Time to wait before disconnect. (default: Infinity)', Number)
 .option('-m, --mapbefore <expression>', 'Map expression before processing, right after --filterbefore.')
 .option('-M, --mapafter <expression>', 'Map expression after processing, right before the callback')
 .option('-f, --filterbefore <expression>', 'Filter using boolean expression at the beginning.')
@@ -80,6 +80,7 @@ exit = (code) ->
   process.exit code
 
 doTimeout = (timeout) ->
+  return unless timeout?
   setTimeout ->
     exit 0
   , timeout
