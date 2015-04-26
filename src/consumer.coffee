@@ -1,6 +1,6 @@
 amqp = require 'amqp'
 uuid = require 'uuid-v4.js'
-colors = require 'colors'
+chalk = require 'chalk'
 rx = require 'rx'
 {BSON} = require 'bson/lib/bson/bson'
 {Delay} = require './timers'
@@ -395,7 +395,7 @@ exports.Consumer = class Consumer
 
     # highlight code that comes from config
     highlight = (c) ->
-      c.grey if c?
+      chalk.black.bgYellow c if c?
 
     code = ''
 
@@ -490,7 +490,7 @@ exports.Consumer = class Consumer
     #console.log code
 
     # remove colors before compilation
-    code = code.stripColors
+    code = chalk.stripColor code
 
     # compile code and execute it
     func = new Function 'subject', 'pairAggregation', code

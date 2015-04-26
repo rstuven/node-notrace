@@ -1,6 +1,6 @@
 program = require 'commander'
 util = require 'util'
-colors = require 'colors'
+chalk = require 'chalk'
 {Consumer} = require '..'
 
 version = JSON.parse(require('fs').readFileSync(__dirname + '/../package.json', 'utf8')).version
@@ -111,7 +111,7 @@ report =
         h = pad k, 15
       else
         h = pad k, 20
-      h.blue
+      chalk.blue h
 
     formatValue = (v) ->
       if not v?
@@ -121,12 +121,12 @@ report =
         if f.slice(-3) is '000'
           f = v.toString()
         r = pad f, -15
-        r.grey
+        chalk.gray r
       else if typeof v is 'string'
         pad v, 20
       else if typeof v is 'boolean'
         r = pad v.toString(), 15
-        r.yellow
+        chalk.yellow r
       else if /Quantizer$/.test v.constructor.name
         formatQuantizer v
       else
@@ -141,7 +141,7 @@ report =
         return pad '', length if x is 0
         x = [1..x].map(-> '▒').join ''
         x = pad x, length
-        x.red
+        chalk.red x
 
       lines = []
       lines.push ''
@@ -151,7 +151,7 @@ report =
         count = q.count i
         totalCount += count
         lines.push formatValue(q.indexValue i) + '│' + bar(count) + '│' + formatValue(count)
-      lines.push pad('', 15) + '│' + pad('total count ', -length).yellow + '│' + formatValue(totalCount).stripColors
+      lines.push pad('', 15) + '│' + chalk.yellow(pad('total count ', -length)) + '│' + chalk.stripColor(formatValue(totalCount))
       lines.push ''
       lines.join '\n'
 
@@ -186,7 +186,7 @@ report =
 
     (x) ->
       result = formatObject x
-      result = result.stripColors if program.nocolor
+      result = chalk.stripColor result if program.nocolor
       process.stdout.write result
 
 
