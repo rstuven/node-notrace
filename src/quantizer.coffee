@@ -85,4 +85,3 @@ exports.LinearQuantizer = class LinearQuantizer extends Quantizer
         return null if value < @lowerBound
         return null if value > @upperBound
         Math.ceil((value - @lowerBound) / @stepValue)
-

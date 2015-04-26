@@ -401,4 +401,3 @@ exports.Provider = class Provider extends EventEmitter
         if @connection?
             @connection.end()
             @connection = null
-

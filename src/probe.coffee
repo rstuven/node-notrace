@@ -204,4 +204,3 @@ exports.Probe = class Probe extends EventEmitter
             if timer?
                 timer.stop()
                 delete @consumerTimers[consumerId]
-

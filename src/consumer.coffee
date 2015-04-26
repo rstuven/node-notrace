@@ -354,7 +354,7 @@ exports.Consumer = class Consumer
      *
      * Disconnects from server.
      *
-     * @param {Boolean} immediate Specifies whether to disconnect immediately or to wait a few seconds 
+     * @param {Boolean} immediate Specifies whether to disconnect immediately or to wait a few seconds
     ###
     disconnect: (immediate = true) ->
         if @samples?
@@ -533,4 +533,3 @@ exports.Consumer = class Consumer
                 (d1 - (n1 - n0) / (t1 - t0)) * 100
             when 'timer_100_ns_inverse'
                 (1 - (n1 - n0) / (t1 - t0)) * 100
-
