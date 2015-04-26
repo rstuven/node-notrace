@@ -209,10 +209,7 @@ exports.Consumer = class Consumer
     else
       probeKey = config.probeKey
 
-    if config? and config.sampleInterval?
-      @sampleInterval = config.sampleInterval
-    else
-      @sampleInterval = REQUEST_SAMPLE_INTERVAL
+    @sampleInterval = config?.sampleInterval ? REQUEST_SAMPLE_INTERVAL
 
     # fill with asteriks where ommitted
     probeKey = probeKey.replace /^\./, '*.'
@@ -298,7 +295,7 @@ exports.Consumer = class Consumer
 
     #console.log "Consumer of #{@probeKey} connecting..."
 
-    host = @config.host or 'localhost'
+    host = @config.host ? 'localhost'
 
     @connection = amqp.createConnection
       host: host
@@ -355,10 +352,8 @@ exports.Consumer = class Consumer
    * @param {Boolean} immediate Specifies whether to disconnect immediately or to wait a few seconds
   ###
   disconnect: (immediate = true) ->
-    if @samples?
-      @samples = null
-    if @requests?
-      @requests = null
+    @samples = null
+    @requests = null
     @connectionEndDelay.stop()
     if immediate
       if @connection?

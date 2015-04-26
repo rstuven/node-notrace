@@ -33,9 +33,9 @@ exports.Probe = class Probe extends EventEmitter
      * # .name
      * Gets the probe name
     ###
-    if not config.name? or typeof config.name isnt 'string' or config.name is ''
+    if typeof config.name isnt 'string' or config.name is ''
       throw new Error "Argument is missing: 'name'"
-    if config.name.match /[\.#*]/
+    if /[\.#*]/.test config.name
       throw new Error 'Invalid character in name. The following are reserved: .#*'
     @name = config.name
 
@@ -43,7 +43,7 @@ exports.Probe = class Probe extends EventEmitter
      * # .types
      * Gets the array of argument types.
     ###
-    if (not config.types?) or (not config.types instanceof Array) or (config.types.length is 0)
+    if config.types not instanceof Array or config.types.length is 0
       @types = ['number']
     else
       @types = config.types
@@ -52,7 +52,7 @@ exports.Probe = class Probe extends EventEmitter
      * # .enabled
      * Gets the enabled status.
     ###
-    @enabled = config.enabled is true # it's false by default
+    @enabled = config.enabled ? false
 
     ###*
      * # .instant
@@ -65,13 +65,13 @@ exports.Probe = class Probe extends EventEmitter
      * Set this property only at initialization. DO NOT modify it after the probe starts operating.
      *
     ###
-    @instant = config.instant is true # it's false by default
+    @instant = config.instant ? false
 
     ###*
      * # .sampleThreshold
      * Gets the sample threshold value.
     ###
-    @sampleThreshold = if not config.sampleThreshold? then SAMPLE_THRESHOLD else config.sampleThreshold
+    @sampleThreshold = config.sampleThreshold ? SAMPLE_THRESHOLD
 
     ###*
      * # .args
@@ -82,7 +82,7 @@ exports.Probe = class Probe extends EventEmitter
         @args = config.args
       else
         @args = [config.args]
-      if @args.length is 1 and (typeof @args[0] is 'function')
+      if @args.length is 1 and typeof @args[0] is 'function'
         @args = @args[0]
     else
       @args = @types.map (type) -> if type is 'number' then 0 else ''
