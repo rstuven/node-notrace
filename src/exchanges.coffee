@@ -1,7 +1,7 @@
 # exchange to publish samples
 exports.samples = (connection, callback) ->
     return if not connection?
-    connection.exchange 'notrace-samples'
+    connection.exchange 'notrace-samples',
         type: 'topic'
         autoDelete: true
         callback
@@ -9,8 +9,7 @@ exports.samples = (connection, callback) ->
 # exchange to publish requests
 exports.requests = (connection, callback) ->
     return if not connection?
-    connection.exchange 'notrace-requests'
+    connection.exchange 'notrace-requests',
         type: 'fanout'
         autoDelete: true
         callback
-
