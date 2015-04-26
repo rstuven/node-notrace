@@ -8,12 +8,19 @@
     "url": "git://github.com/rstuven/node-notrace.git"
   },
   "main": "lib/main",
-  "bin": { "notrace": "./bin/notrace" },
+  "bin": {
+    "notrace": "./bin/notrace"
+  },
   "scripts": {
-    "test": "make test"
+    "clean": "rm -rf ./lib && rm -rf ./bin",
+    "js": "mkdir lib && coffee -c -o ./lib ./src",
+    "bin": "mkdir bin && echo #!/usr/bin/env node | cat - ./lib/cli.js > ./bin/notrace && rm ./lib/cli.js && chmod +x ./bin/notrace",
+    "all": "npm run clean && npm run js && npm run bin",
+    "doc": "npm run all && codex build -i ./doc -o ../node-notrace-doc",
+    "test": "npm run all && mocha -R spec --compilers coffee:coffee-script/register"
   },
   "engines": {
-    "node": "~0.6.1"
+    "node": ">=0.12.0"
   },
   "dependencies": {
     "bson": "*",
